@@ -81,7 +81,10 @@ const OMR = (function () {
     }
   }
 
-  function save() { localStorage.setItem(dataKey(), JSON.stringify(state)); }
+  function save() {
+    try { localStorage.setItem(dataKey(), JSON.stringify(state)); return true; }
+    catch (e) { console.warn('Gagal menyimpan (penyimpanan mungkin penuh):', e); return false; }
+  }
   function saveProfiles() { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); }
 
   function resetAll() {

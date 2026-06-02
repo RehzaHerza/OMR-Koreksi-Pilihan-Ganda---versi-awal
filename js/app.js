@@ -416,9 +416,13 @@
     OMR.state.students.push({
       id: Date.now(), name: currentScan.name.trim(), kelas: currentScan.kelas.trim(),
       answers: currentScan.answers.slice(), score: g.score, maxScore: g.maxScore,
-      percent: g.percent, counts: g.counts, detail: g.detail, ts: Date.now()
+      percent: g.percent, counts: g.counts, ts: Date.now()
     });
-    OMR.save();
+    if (!OMR.save()) {
+      OMR.state.students.pop();   // batalkan: penyimpanan gagal
+      toast('Penyimpanan penuh. Buka tab Rekap Nilai → Unduh Excel, lalu "Kosongkan Daftar", baru simpan lagi.', 'err', '#scan-result');
+      return false;
+    }
     currentScan = null; $('#scan-result').innerHTML = '';
     toast('Tersimpan. Lihat tab "Rekap Nilai".', 'ok', '#scan-result');
     return true;
