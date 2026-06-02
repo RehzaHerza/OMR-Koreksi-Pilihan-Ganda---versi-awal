@@ -25,10 +25,19 @@ const OMR = (function () {
       numQuestions: 20,
       numOptions: 5,      // A..E
       columns: 2,
-      defaultWeight: 1
+      defaultWeight: 1,
+      // --- Header format resmi (untuk lembar cetak) ---
+      titleLines: 'LEMBAR JAWABAN\nASESMEN SUMATIF AKHIR SEMESTER\nTAHUN PELAJARAN 2025/2026',
+      mapel: '',          // bila kosong -> dicetak sbg garis isian
+      hariTanggal: '',
+      waktu: '',
+      // --- Bagian esai (hanya dicetak, TIDAK discan) ---
+      hasEssay: false,
+      essayCount: 5
     },
-    answerKey: [],        // [{correct:'B', half:null, weight:1}, ...]
-    students: []          // [{id,name,kelas,answers:[],score,maxScore,percent,detail:[],ts}]
+    answerKey: [],        // [{correct:'B', weight:1}, ...]
+    students: [],         // [{id,name,kelas,answers:[],score,maxScore,percent,detail:[],ts}]
+    models: []            // [{id,name,config,answerKey}] -> template lembar tersimpan
   });
 
   let profiles = loadProfiles();
@@ -44,7 +53,7 @@ const OMR = (function () {
     } catch (e) { /* lanjut buat baru */ }
 
     // Pertama kali: buat profil default + migrasi data lama bila ada
-    const id = 'p' + Date.now();
+    const id = uid('p');
     const reg = { active: id, list: [{ id, name: 'Guru 1' }] };
     localStorage.setItem(PROFILES_KEY, JSON.stringify(reg));
     const legacy = localStorage.getItem(LEGACY_KEY);
@@ -56,6 +65,8 @@ const OMR = (function () {
   }
 
   function dataKey() { return DATA_PREFIX + profiles.active; }
+
+  function uid(prefix) { return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 
   function loadState() {
     try {
@@ -89,7 +100,7 @@ const OMR = (function () {
     syncAnswerKeyInternal();
   }
   function addProfile(name) {
-    const id = 'p' + Date.now();
+    const id = uid('p');
     profiles.list.push({ id, name: (name || '').trim() || ('Guru ' + (profiles.list.length + 1)) });
     profiles.active = id; saveProfiles();
     state = loadState(); syncAnswerKeyInternal();
@@ -133,8 +144,8 @@ const OMR = (function () {
   ------------------------------------------------------------ */
   const LAYOUT = {
     marginX: 0.05,        // margin kiri/kanan area soal (dlm ruang marker)
-    marginTop: 0.16,      // ruang header (judul + nama)
-    marginBottom: 0.04,
+    marginTop: 0.25,      // ruang header resmi (judul + identitas + sub-judul)
+    marginBottom: 0.06,   // ruang kotak Nilai (mode tanpa esai)
     qLabelFrac: 0.18,     // porsi lebar kolom untuk nomor soal
     optAreaFrac: 0.80,    // porsi lebar kolom untuk deretan kotak opsi
     boxFillW: 0.62,       // ukuran sampling relatif lebar 1 kotak
@@ -199,6 +210,32 @@ const OMR = (function () {
 
     /* profil guru */
     listProfiles, activeProfile, switchProfile, addProfile, renameProfile, deleteProfile,
+
+    /* model lembar (template tersimpan) */
+    listModels() { return (state.models || []).map(m => ({ id: m.id, name: m.name })); },
+    saveModel(name) {
+      if (!state.models) state.models = [];
+      const clone = o => JSON.parse(JSON.stringify(o));
+      const nm = (name || '').trim() || (state.config.examTitle || 'Model') ;
+      const existing = state.models.find(m => m.name === nm);
+      const data = { config: clone(state.config), answerKey: clone(state.answerKey) };
+      if (existing) { Object.assign(existing, data); }
+      else { state.models.push(Object.assign({ id: uid('m'), name: nm }, data)); }
+      save();
+    },
+    loadModel(id) {
+      const m = (state.models || []).find(x => x.id === id);
+      if (!m) return false;
+      const clone = o => JSON.parse(JSON.stringify(o));
+      state.config = Object.assign(defaultState().config, clone(m.config));
+      state.answerKey = clone(m.answerKey);
+      save(); syncAnswerKeyInternal();
+      return true;
+    },
+    deleteModel(id) {
+      state.models = (state.models || []).filter(x => x.id !== id);
+      save();
+    },
 
     /* sinkronkan panjang answerKey dengan numQuestions */
     syncAnswerKey: syncAnswerKeyInternal

@@ -94,6 +94,19 @@ memakai komputer/browser yang sama.
 
 ## Batas versi ini
 
-Penyimpanan lokal per-perangkat (bukan server/cloud, tanpa login). Untuk
-banyak ujian di satu profil, simpan ekspor lalu ganti kunci. Koreksi esai
-dilakukan manual di luar app.
+Penyimpanan lokal per-perangkat (bukan server/cloud, tanpa login). Koreksi
+esai dilakukan manual di luar app.
+
+## Format resmi & Model lembar (baru)
+
+Lembar yang dihasilkan kini berformat resmi: kop judul yang bisa diatur,
+identitas (Mata Pelajaran/Hari-Tanggal/Waktu/No. Peserta/Nama/Kelas), tabel
+"A. PILIHAN GANDA" bergaris dua kolom, opsi halaman "B. ESSAY/URAIAN"
+(hanya dicetak, tidak discan), dan kotak Nilai/Paraf. **Empat marker hitam
+tetap ada** di sudut area pilihan ganda (halaman 1) — itu yang membuat scan
+bekerja, jadi halaman 1 wajib tercetak utuh & difoto lengkap.
+
+Di tab Pengaturan ada **Model Lembar**: simpan kombinasi pengaturan + kunci
+sebagai model bernama (mis. tiap tahun/mapel beda), lalu muat sebelum mencetak
+& scan. Penting: lembar tetap **dicetak dari app ini** (yang memuat marker);
+app tidak membaca lembar dari luar yang tanpa marker.

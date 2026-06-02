@@ -84,27 +84,78 @@
       el('p', { class: 'sub' }, 'Atur dulu sebelum membuat kunci & lembar jawaban. Mengubah jumlah soal akan menyesuaikan kunci jawaban.')
     ]);
     const form = el('div', { class: 'grid-form' }, [
-      mkField('Judul ujian', mkInput('text', c.examTitle, v => c.examTitle = v, 'cfg-title')),
+      mkField('Judul ujian (internal)', mkInput('text', c.examTitle, v => c.examTitle = v, 'cfg-title')),
       mkField('Jumlah soal', mkInput('number', c.numQuestions, v => c.numQuestions = clamp(+v, 1, 100), 'cfg-q', { min: 1, max: 100 })),
       mkField('Jumlah opsi (A–…)', mkSelect([3, 4, 5, 6], c.numOptions, v => c.numOptions = +v, 'cfg-o')),
       mkField('Kolom di lembar', mkSelect([1, 2, 3], c.columns, v => c.columns = +v, 'cfg-col')),
       mkField('Bobot default / soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(0.1, +v), 'cfg-w', { min: .5, step: .5 }))
     ]);
     card.appendChild(form);
+
+    // --- Header lembar resmi ---
+    card.appendChild(el('h3', { class: 'section' }, 'Header Lembar (untuk cetak)'));
+    const ta = el('textarea', { id: 'cfg-titlelines', rows: '3', style: 'width:100%;font-family:var(--sans);font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;resize:vertical' });
+    ta.value = c.titleLines || '';
+    ta.addEventListener('input', e => c.titleLines = e.target.value);
+    card.appendChild(el('label', { class: 'field' }, ['Judul kop (tiap baris = 1 baris di lembar)', ta]));
+    card.appendChild(el('div', { class: 'grid-form', style: 'margin-top:12px' }, [
+      mkField('Mata Pelajaran (kosong = garis isian)', mkInput('text', c.mapel || '', v => c.mapel = v, 'cfg-mapel')),
+      mkField('Hari/Tanggal (opsional)', mkInput('text', c.hariTanggal || '', v => c.hariTanggal = v, 'cfg-hari')),
+      mkField('Waktu (opsional)', mkInput('text', c.waktu || '', v => c.waktu = v, 'cfg-waktu'))
+    ]));
+
+    // --- Bagian esai ---
+    card.appendChild(el('h3', { class: 'section' }, 'Bagian Esai (hanya dicetak, dinilai manual)'));
+    const essayWrap = el('div', { class: 'grid-form' }, [
+      mkField('Sertakan halaman esai?', mkSelect(['Tidak', 'Ya'], c.hasEssay ? 'Ya' : 'Tidak', v => c.hasEssay = (v === 'Ya'), 'cfg-essay')),
+      mkField('Jumlah soal esai', mkInput('number', c.essayCount || 5, v => c.essayCount = clamp(+v, 1, 20), 'cfg-essayn', { min: 1, max: 20 }))
+    ]);
+    card.appendChild(essayWrap);
+
     card.appendChild(el('div', { class: 'btn-row' }, [
       el('button', { class: 'btn accent', onclick: saveSetup }, 'Simpan Pengaturan'),
       el('button', { class: 'btn ghost', onclick: resetEverything }, 'Reset Semua Data')
     ]));
     $('#view-setup').appendChild(card);
+
+    // --- Manajemen Model Lembar ---
+    renderModelCard();
   }
-  function saveSetup() {
+
+  function renderModelCard() {
+    const models = OMR.listModels();
+    const card = el('div', { class: 'card' }, [
+      el('h2', {}, 'Model Lembar'),
+      el('p', { class: 'sub' }, 'Simpan kombinasi pengaturan + kunci jawaban sebagai "model" untuk dipakai ulang (mis. tiap tahun/mapel beda). Pilih model sebelum mencetak & sebelum scan.')
+    ]);
+    const row = el('div', { class: 'btn-row' });
+    if (models.length) {
+      const sel = el('select', { id: 'model-sel', style: 'width:auto;min-width:200px' }, models.map(m => { const o = el('option', { value: m.id }); o.textContent = m.name; return o; }));
+      row.appendChild(sel);
+      row.appendChild(el('button', { class: 'btn', onclick: () => { OMR.loadModel($('#model-sel').value); renderSetup(); toast('Model dimuat. Pengaturan & kunci diperbarui.', 'ok', '#view-setup'); } }, 'Muat'));
+      row.appendChild(el('button', { class: 'btn ghost', onclick: () => { const m = models.find(x => x.id === $('#model-sel').value); if (m && confirm('Hapus model "' + m.name + '"?')) { OMR.deleteModel(m.id); renderSetup(); } } }, 'Hapus'));
+    } else {
+      card.appendChild(el('div', { class: 'empty', style: 'padding:14px' }, 'Belum ada model tersimpan.'));
+    }
+    row.appendChild(el('button', { class: 'btn accent', onclick: () => { const n = prompt('Simpan pengaturan + kunci saat ini sebagai model bernama:', OMR.cfg.examTitle); if (n === null) return; saveSetup(true); OMR.saveModel(n); renderSetup(); toast('Model "' + (n || OMR.cfg.examTitle) + '" tersimpan.', 'ok', '#view-setup'); } }, '+ Simpan sebagai Model'));
+    card.appendChild(row);
+    $('#view-setup').appendChild(card);
+  }
+
+  function saveSetup(silent) {
     OMR.cfg.examTitle = $('#cfg-title').value || 'Ulangan Harian';
     OMR.cfg.numQuestions = clamp(+$('#cfg-q').value, 1, 100);
     OMR.cfg.numOptions = +$('#cfg-o').value;
     OMR.cfg.columns = +$('#cfg-col').value;
     OMR.cfg.defaultWeight = Math.max(0.1, +$('#cfg-w').value);
+    if ($('#cfg-titlelines')) OMR.cfg.titleLines = $('#cfg-titlelines').value;
+    if ($('#cfg-mapel')) OMR.cfg.mapel = $('#cfg-mapel').value;
+    if ($('#cfg-hari')) OMR.cfg.hariTanggal = $('#cfg-hari').value;
+    if ($('#cfg-waktu')) OMR.cfg.waktu = $('#cfg-waktu').value;
+    if ($('#cfg-essay')) OMR.cfg.hasEssay = ($('#cfg-essay').value === 'Ya');
+    if ($('#cfg-essayn')) OMR.cfg.essayCount = clamp(+$('#cfg-essayn').value, 1, 20);
     OMR.syncAnswerKey();
-    toast('Pengaturan tersimpan.', 'ok', '#view-setup');
+    if (!silent) toast('Pengaturan tersimpan.', 'ok', '#view-setup');
   }
   function resetEverything() {
     if (!confirm('Hapus SEMUA data (pengaturan, kunci, & nilai siswa)? Tidak bisa dibatalkan.')) return;
@@ -144,17 +195,22 @@
 
   /* ---------------- 3. Lembar Jawaban ---------------- */
   function renderSheet() {
+    OMR.syncAnswerKey();
     const wrap = $('#view-sheet'); wrap.innerHTML = '';
-    const canvas = el('canvas');
-    OMRSheet.render(canvas, OMR.cfg);
+    const pages = OMRSheet.pages(OMR.cfg);   // [hal.1, (hal.2 esai)]
+    const previews = el('div', {});
+    pages.forEach((c, i) => {
+      previews.appendChild(el('div', { class: 'canvas-wrap', style: 'margin-bottom:10px' }, c));
+      if (i === 0) previews.lastChild.appendChild(el('div', { class: 'sub', style: 'margin:6px 0 0' }, 'Halaman 1 — DISCAN'));
+      else previews.lastChild.appendChild(el('div', { class: 'sub', style: 'margin:6px 0 0' }, 'Halaman ' + (i + 1) + ' — esai (tidak discan)'));
+    });
     const card = el('div', { class: 'card' }, [
       el('h2', {}, 'Lembar Jawaban'),
-      el('p', { class: 'sub' }, 'Cetak lembar ini, lalu siswa menyilang (X) opsi dengan ballpoint. Empat kotak hitam di sudut WAJIB ikut tercetak — itu acuan pembacaan kamera.'),
-      el('div', { class: 'canvas-wrap' }, canvas),
+      el('p', { class: 'sub' }, 'Cetak lembar ini. Halaman 1 (pilihan ganda) yang difoto untuk dikoreksi — empat kotak hitam di sudutnya WAJIB ikut tercetak & terlihat. Halaman esai (bila ada) tidak discan.'),
+      previews,
       el('div', { class: 'btn-row' }, [
-        el('button', { class: 'btn accent', onclick: () => OMRSheet.print(canvas) }, 'Cetak'),
-        el('button', { class: 'btn', onclick: () => OMRSheet.downloadPDF(canvas, OMR.cfg) }, 'Unduh PDF'),
-        el('button', { class: 'btn ghost', onclick: () => download(canvas.toDataURL('image/png'), 'lembar_jawaban.png') }, 'Unduh PNG')
+        el('button', { class: 'btn accent', onclick: () => OMRSheet.print(OMR.cfg) }, 'Cetak'),
+        el('button', { class: 'btn', onclick: () => OMRSheet.downloadPDF(OMR.cfg) }, 'Unduh PDF')
       ])
     ]);
     wrap.appendChild(card);
