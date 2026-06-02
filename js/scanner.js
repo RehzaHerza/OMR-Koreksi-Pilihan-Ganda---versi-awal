@@ -71,14 +71,17 @@ const OMRCV = (function () {
         if (visited[li]) continue;
         const gx = x0 + lx, gy = y0 + ly;
         if (!isDark(gx, gy)) { visited[li] = 1; continue; }
-        // BFS/DFS flood fill
+        // BFS/DFS flood fill (lacak bbox utk validasi bentuk)
         let sp = 0, sumX = 0, sumY = 0, cnt = 0;
+        let mnx = lx, mxx = lx, mny = ly, mxy = ly;
         stack[sp++] = lx; stack[sp++] = ly;
         visited[li] = 1;
         while (sp > 0) {
           const cy = stack[--sp], cx = stack[--sp];
           const cgx = x0 + cx, cgy = y0 + cy;
           sumX += cgx; sumY += cgy; cnt++;
+          if (cx < mnx) mnx = cx; if (cx > mxx) mxx = cx;
+          if (cy < mny) mny = cy; if (cy > mxy) mxy = cy;
           // tetangga 4-arah
           const nb = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
           for (const [nx, ny] of nb) {
@@ -89,12 +92,26 @@ const OMRCV = (function () {
             if (isDark(x0 + nx, y0 + ny)) { stack[sp++] = nx; stack[sp++] = ny; }
           }
         }
-        if (!best || cnt > best.cnt) best = { cnt, cx: sumX / cnt, cy: sumY / cnt };
+        if (!best || cnt > best.cnt) best = { cnt, cx: sumX / cnt, cy: sumY / cnt, bw: mxx - mnx + 1, bh: mxy - mny + 1 };
       }
     }
     // tolak blob terlalu kecil (noise)
     if (!best || best.cnt < (ww * hh) * 0.004) return null;
-    return { x: best.cx, y: best.cy, area: best.cnt };
+    return { x: best.cx, y: best.cy, area: best.cnt, bw: best.bw, bh: best.bh };
+  }
+
+  /* Validasi: gumpalan ini benar-benar mirip MARKER (kotak hitam padat)?
+     Menolak rambut/bayangan/layar HP yang gelap tapi tak berbentuk kotak. */
+  function markerLike(b, winW, winH) {
+    if (!b) return false;
+    const aspect = b.bw / b.bh;
+    if (aspect < 0.55 || aspect > 1.8) return false;            // harus ~persegi
+    const fill = b.area / (b.bw * b.bh);
+    if (fill < 0.55) return false;                              // padat (bukan rambut/acak)
+    const minS = Math.min(winW, winH) * 0.03;
+    if (b.bw < minS || b.bh < minS) return false;               // jangan terlalu kecil
+    if (b.bw > winW * 0.6 || b.bh > winH * 0.6) return false;    // jangan sebesar jendela
+    return true;
   }
 
   /* Deteksi 4 marker pojok. Mengembalikan {tl,tr,bl,br} atau null. */
@@ -105,6 +122,17 @@ const OMRCV = (function () {
     const bl = largestDarkCentroid(gray, w, h, 0, h - wy, wx, h, fidThr);
     const br = largestDarkCentroid(gray, w, h, w - wx, h - wy, w, h, fidThr);
     if (!tl || !tr || !bl || !br) return null;
+
+    // 1) tiap gumpalan harus benar-benar mirip marker (kotak padat), bukan rambut/layar
+    if (![tl, tr, bl, br].every(b => markerLike(b, wx, wy))) return null;
+
+    // 2) susunan 4 titik harus masuk akal sbg lembar (tdk acak)
+    if (!(tl.x < tr.x && bl.x < br.x && tl.y < bl.y && tr.y < br.y)) return null;
+
+    // 3) ke-4 marker harus mencakup area yang cukup luas (lembar mengisi frame)
+    const spanTop = tr.x - tl.x, spanLeft = bl.y - tl.y;
+    if (spanTop < w * 0.30 || spanLeft < h * 0.22) return null;
+
     return { tl, tr, bl, br };
   }
 
