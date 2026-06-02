@@ -20,6 +20,9 @@
   let currentScan = null;     // {answers, name, kelas}
   let stream = null;          // kamera
   let currentTab = 'setup';   // tab aktif (utk render ulang stlh ganti profil)
+  // --- mode live ---
+  let liveActive = false, liveGraded = false, liveLast = null, liveStable = 0, liveTimer = null, liveVideo = null, liveFrame = null;
+  const LIVE_STABLE = 4, LIVE_MOVE_TOL = 12, LIVE_INTERVAL = 280;
 
   /* ---------------- Profile bar ---------------- */
   function renderProfileBar() {
@@ -221,9 +224,10 @@
     const wrap = $('#view-scan'); wrap.innerHTML = '';
     const card = el('div', { class: 'card' }, [
       el('h2', {}, 'Scan & Koreksi'),
-      el('p', { class: 'sub' }, 'Foto lembar yang sudah disilang (lewat kamera atau unggah file). Pastikan keempat sudut & seluruh lembar terlihat, pencahayaan rata.'),
+      el('p', { class: 'sub' }, 'Mode Live: arahkan lembar ke kamera (mis. webcam di tripod menghadap bawah) — begitu stabil, app otomatis membaca & menilai. Atau ambil/unggah satu foto secara manual.'),
       el('div', { class: 'btn-row' }, [
-        el('button', { class: 'btn', id: 'btn-cam', onclick: startCamera }, 'Buka Kamera'),
+        el('button', { class: 'btn accent', id: 'btn-live', onclick: startLive }, 'Mulai Mode Live'),
+        el('button', { class: 'btn', id: 'btn-cam', onclick: startCamera }, 'Ambil Satu Foto'),
         el('button', { class: 'btn ghost', onclick: () => $('#file-in').click() }, 'Unggah Foto'),
         el('input', { type: 'file', id: 'file-in', accept: 'image/*', style: 'display:none', onchange: onUpload })
       ]),
@@ -234,6 +238,7 @@
   }
 
   async function startCamera() {
+    stopCamera();
     const area = $('#cam-area'); area.innerHTML = '';
     try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } });
@@ -249,9 +254,78 @@
     ]));
   }
   function stopCamera() {
+    liveActive = false;
+    if (liveTimer) { clearTimeout(liveTimer); liveTimer = null; }
+    liveVideo = null; liveLast = null; liveStable = 0; liveGraded = false;
     if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
     const a = $('#cam-area'); if (a) a.innerHTML = '';
   }
+
+  /* ---------------- Mode Live ---------------- */
+  async function startLive() {
+    stopCamera();
+    const area = $('#cam-area'); area.innerHTML = '';
+    $('#scan-result').innerHTML = '';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 1920 } } });
+    } catch (e) {
+      toast('Tidak bisa akses kamera: ' + e.message + '. Coba "Unggah Foto".', 'err', '#cam-area'); return;
+    }
+    const video = el('video', { autoplay: '', playsinline: '', muted: '' });
+    video.srcObject = stream; liveVideo = video;
+    area.appendChild(el('div', { class: 'live-stage' }, [video, el('div', { id: 'live-status', class: 'live-status' }, 'Memulai kamera…')]));
+    area.appendChild(el('div', { class: 'btn-row' }, [el('button', { class: 'btn ghost', onclick: stopCamera }, 'Hentikan Mode Live')]));
+    OMR.syncAnswerKey();
+    liveActive = true; liveGraded = false; liveLast = null; liveStable = 0;
+    loopLive();
+  }
+
+  function frameCanvas(video) {
+    if (!liveFrame) liveFrame = document.createElement('canvas');
+    liveFrame.width = video.videoWidth; liveFrame.height = video.videoHeight;
+    liveFrame.getContext('2d').drawImage(video, 0, 0);
+    return liveFrame;
+  }
+  function fidMove(a, b) {
+    return ['tl', 'tr', 'bl', 'br'].reduce((s, k) => s + Math.hypot(a[k].x - b[k].x, a[k].y - b[k].y), 0) / 4;
+  }
+  function setStatus(text, cls) { const s = $('#live-status'); if (s) { s.textContent = text; s.className = 'live-status' + (cls ? ' ' + cls : ''); } }
+
+  function loopLive() {
+    if (!liveActive || !liveVideo) return;
+    if (liveVideo.videoWidth) {
+      const c = frameCanvas(liveVideo);
+      const res = OMRCV.process(c, c.width, c.height, OMR.cfg);
+      if (res.ok) {
+        const f = res.debug.fids;
+        const move = liveLast ? fidMove(f, liveLast) : 999;
+        liveLast = f;
+        liveStable = (move < LIVE_MOVE_TOL) ? liveStable + 1 : 1;
+        const g = OMRScore.gradeAll(res.answers, OMR.state.answerKey);
+        if (liveStable >= LIVE_STABLE && !liveGraded) {
+          liveGraded = true; liveActive = false;
+          setStatus('Terkunci ✓ — periksa & simpan', 'ok');
+          runPipeline(c, c.width, c.height, true);
+          return;
+        }
+        setStatus(`Lembar terdeteksi · nilai sementara ${g.percent} · tahan stabil (${Math.min(liveStable, LIVE_STABLE)}/${LIVE_STABLE})`, 'ok');
+      } else {
+        liveStable = 0; liveLast = null;
+        setStatus('Arahkan lembar — pastikan ke-4 sudut (kotak hitam) terlihat jelas', 'wait');
+      }
+    }
+    liveTimer = setTimeout(loopLive, LIVE_INTERVAL);
+  }
+
+  function resumeLive() {
+    $('#scan-result').innerHTML = '';
+    currentScan = null;
+    if (!stream || !liveVideo) return;
+    liveActive = true; liveGraded = false; liveLast = null; liveStable = 0;
+    setStatus('Siap — arahkan lembar berikutnya', 'wait');
+    loopLive();
+  }
+
   function capture(video) {
     const c = el('canvas'); c.width = video.videoWidth; c.height = video.videoHeight;
     c.getContext('2d').drawImage(video, 0, 0);
@@ -266,11 +340,15 @@
     img.src = URL.createObjectURL(f);
   }
 
-  function runPipeline(src, w, h) {
+  function runPipeline(src, w, h, liveMode) {
     OMR.syncAnswerKey();
     const res = OMRCV.process(src, w, h, OMR.cfg);
     const box = $('#scan-result'); box.innerHTML = '';
-    if (!res.ok) { box.appendChild(notice(res.reason, 'err')); return; }
+    if (!res.ok) {
+      box.appendChild(notice(res.reason, 'err'));
+      if (liveMode) box.appendChild(el('div', { class: 'btn-row' }, [el('button', { class: 'btn', onclick: resumeLive }, 'Coba Lagi')]));
+      return;
+    }
     currentScan = { answers: res.answers.slice(), name: '', kelas: '' };
     const dbg = el('canvas');
     OMRCV.drawDebug(dbg, res);
@@ -285,11 +363,19 @@
     box.appendChild(el('h3', { class: 'section' }, 'Jawaban terbaca (bisa dikoreksi)'));
     box.appendChild(el('div', { id: 'review' }));
     box.appendChild(el('div', { id: 'score-preview' }));
-    box.appendChild(el('div', { class: 'btn-row' }, [
-      el('button', { class: 'btn accent', onclick: saveStudent }, 'Simpan ke Daftar Nilai'),
-      el('button', { class: 'btn ghost', onclick: () => { currentScan = null; box.innerHTML = ''; } }, 'Buang')
-    ]));
+    if (liveMode) {
+      box.appendChild(el('div', { class: 'btn-row' }, [
+        el('button', { class: 'btn accent', onclick: () => { if (saveStudent()) resumeLive(); } }, 'Simpan & Scan Berikutnya'),
+        el('button', { class: 'btn ghost', onclick: resumeLive }, 'Lewati & Lanjut')
+      ]));
+    } else {
+      box.appendChild(el('div', { class: 'btn-row' }, [
+        el('button', { class: 'btn accent', onclick: saveStudent }, 'Simpan ke Daftar Nilai'),
+        el('button', { class: 'btn ghost', onclick: () => { currentScan = null; box.innerHTML = ''; } }, 'Buang')
+      ]));
+    }
     renderReview();
+    if (liveMode) { const n = $('#st-name'); if (n) n.focus(); }
   }
 
   function renderReview() {
@@ -324,8 +410,8 @@
     ]));
   }
   function saveStudent() {
-    if (currentScan.answers.includes('?')) { toast('Masih ada soal ambigu (kuning). Pastikan dulu semua.', 'warn', '#scan-result'); return; }
-    if (!currentScan.name.trim()) { toast('Isi nama siswa dulu.', 'warn', '#scan-result'); return; }
+    if (currentScan.answers.includes('?')) { toast('Masih ada soal ambigu (kuning). Pastikan dulu semua.', 'warn', '#scan-result'); return false; }
+    if (!currentScan.name.trim()) { toast('Isi nama siswa dulu.', 'warn', '#scan-result'); return false; }
     const g = OMRScore.gradeAll(currentScan.answers, OMR.state.answerKey);
     OMR.state.students.push({
       id: Date.now(), name: currentScan.name.trim(), kelas: currentScan.kelas.trim(),
@@ -335,6 +421,7 @@
     OMR.save();
     currentScan = null; $('#scan-result').innerHTML = '';
     toast('Tersimpan. Lihat tab "Rekap Nilai".', 'ok', '#scan-result');
+    return true;
   }
 
   /* ---------------- 5. Rekap Nilai ---------------- */

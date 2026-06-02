@@ -110,3 +110,16 @@ Di tab Pengaturan ada **Model Lembar**: simpan kombinasi pengaturan + kunci
 sebagai model bernama (mis. tiap tahun/mapel beda), lalu muat sebelum mencetak
 & scan. Penting: lembar tetap **dicetak dari app ini** (yang memuat marker);
 app tidak membaca lembar dari luar yang tanpa marker.
+
+## Mode Live (scan otomatis)
+
+Di tab Scan & Koreksi ada **Mulai Mode Live**: arahkan lembar ke kamera
+(ideal: webcam autofokus di tripod menghadap bawah, atau HP di dudukan).
+Saat ke-4 marker terdeteksi dan posisi stabil beberapa saat, app otomatis
+mengunci, membaca, dan menampilkan nilai — tinggal ketik nama siswa lalu
+"Simpan & Scan Berikutnya" untuk lembar berikutnya. Tetap ada tombol
+"Ambil Satu Foto" (manual) dan "Unggah Foto".
+
+Catatan: kecepatan baca otomatis, tapi nama siswa tetap diketik manual tiap
+lembar (nama di lembar adalah tulisan tangan, tidak dibaca app). Akurasi tetap
+bergantung kualitas gambar; koreksi manual hasil baca selalu tersedia.
