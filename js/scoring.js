@@ -12,7 +12,6 @@ const OMRScore = (function () {
   function gradeOne(detected, key) {
     const w = key.weight ?? 1;
     if (detected === key.correct) return { status: 'benar', point: w, max: w };
-    if (key.half && detected === key.half) return { status: 'setengah', point: w / 2, max: w };
     if (detected === '-') return { status: 'kosong', point: 0, max: w };
     if (detected === '?') return { status: 'ganda', point: 0, max: w };
     return { status: 'salah', point: 0, max: w };

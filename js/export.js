@@ -7,17 +7,16 @@
 
 const OMRExport = (function () {
 
-  const HEAD = ['No', 'Nama', 'Kelas', 'Benar', 1/2 + '', 'Salah', 'Skor', 'Maks', 'Nilai (%)', 'Waktu'];
-  const HEAD_LABEL = ['No', 'Nama', 'Kelas', 'Benar', 'Setengah', 'Salah', 'Skor', 'Maks', 'Nilai (%)', 'Waktu'];
+  const HEAD_LABEL = ['No', 'Nama', 'Kelas', 'Benar', 'Salah', 'Skor', 'Maks', 'Nilai (%)', 'Waktu'];
 
   function rows(students) {
     return students.map((s, i) => {
       const c = s.counts || {};
-      const benar = c.benar || 0, setengah = c.setengah || 0;
+      const benar = c.benar || 0;
       const salah = (c.salah || 0) + (c.kosong || 0) + (c.ganda || 0);
       return [
         i + 1, s.name || '-', s.kelas || '-',
-        benar, setengah, salah,
+        benar, salah,
         s.score, s.maxScore, s.percent,
         s.ts ? new Date(s.ts).toLocaleString('id-ID') : '-'
       ];
@@ -40,13 +39,13 @@ const OMRExport = (function () {
       ...rows(students)
     ];
     const ws = XLSX.utils.aoa_to_sheet(aoa);
-    ws['!cols'] = [{ wch: 4 }, { wch: 24 }, { wch: 10 }, { wch: 7 }, { wch: 9 }, { wch: 7 }, { wch: 7 }, { wch: 6 }, { wch: 10 }, { wch: 20 }];
-    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 9 } }];
+    ws['!cols'] = [{ wch: 4 }, { wch: 24 }, { wch: 10 }, { wch: 7 }, { wch: 7 }, { wch: 7 }, { wch: 6 }, { wch: 10 }, { wch: 20 }];
+    ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Nilai');
     // sheet kunci jawaban
-    const keyAoa = [['No', 'Kunci', 'Setengah (opsional)', 'Bobot'],
-      ...OMR.state.answerKey.map((k, i) => [i + 1, k.correct, k.half || '-', k.weight ?? 1])];
+    const keyAoa = [['No', 'Kunci', 'Bobot'],
+      ...OMR.state.answerKey.map((k, i) => [i + 1, k.correct, k.weight ?? 1])];
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(keyAoa), 'Kunci');
     XLSX.writeFile(wb, fname('xlsx'));
   }

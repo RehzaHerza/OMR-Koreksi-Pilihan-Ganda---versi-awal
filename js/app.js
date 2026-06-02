@@ -119,13 +119,11 @@
     const wrap = $('#view-key'); wrap.innerHTML = '';
     const card = el('div', { class: 'card' }, [
       el('h2', {}, 'Kunci Jawaban'),
-      el('p', { class: 'sub' }, 'Setel jawaban benar tiap soal. Kolom "Setengah" opsional: bila diisi, opsi itu dinilai separuh bobot. Bobot bisa beda per soal.')
+      el('p', { class: 'sub' }, 'Setel jawaban benar tiap soal. Bobot bisa beda per soal.')
     ]);
     const grid = el('div', { class: 'key-grid' });
     OMR.state.answerKey.forEach((k, i) => {
-      const half = el('select', {}, [optEl('–', ''), ...letters.map(L => optEl(L, L))]);
-      half.value = k.half || '';
-      half.addEventListener('change', e => { k.half = e.target.value || null; OMR.save(); });
+      k.half = null; // pilgan murni: tanpa nilai separuh
       const corr = el('select', {}, letters.map(L => optEl(L, L)));
       corr.value = k.correct;
       corr.addEventListener('change', e => { k.correct = e.target.value; OMR.save(); });
@@ -133,7 +131,6 @@
       grid.appendChild(el('div', { class: 'key-item' }, [
         el('div', { class: 'no' }, String(i + 1)),
         el('div', {}, [el('div', { class: 'lbl' }, 'Benar'), corr]),
-        el('div', {}, [el('div', { class: 'lbl' }, 'Setengah'), half]),
         el('div', {}, [el('div', { class: 'lbl' }, 'Bobot'), wt])
       ]));
     });
@@ -266,7 +263,6 @@
       el('div', { class: 'kv' }, [
         el('span', { html: `Skor: <b>${g.score}</b> / ${g.maxScore}` }),
         el('span', { html: `<span class="stat benar">Benar ${g.counts.benar || 0}</span>` }),
-        el('span', { html: `<span class="stat setengah">Setengah ${g.counts.setengah || 0}</span>` }),
         el('span', { html: `<span class="stat salah">Salah ${(g.counts.salah || 0) + (g.counts.kosong || 0) + (g.counts.ganda || 0)}</span>` })
       ])
     ]));
@@ -309,7 +305,6 @@
           el('td', { class: 'name' }, s.name),
           el('td', {}, s.kelas || '-'),
           el('td', { html: `<span class="stat benar">${c.benar || 0}</span>` }),
-          el('td', { html: `<span class="stat setengah">${c.setengah || 0}</span>` }),
           el('td', { html: `<span class="stat salah">${salah}</span>` }),
           el('td', {}, `${s.score} / ${s.maxScore}`),
           el('td', { html: `<span class="pill">${s.percent}</span>` }),
@@ -317,7 +312,7 @@
         ]);
       });
       const table = el('table', { class: 'rekap' }, [
-        el('thead', {}, el('tr', {}, ['No', 'Nama', 'Kelas', 'Benar', 'Stgh', 'Salah', 'Skor', 'Nilai', ''].map(h => el('th', {}, h)))),
+        el('thead', {}, el('tr', {}, ['No', 'Nama', 'Kelas', 'Benar', 'Salah', 'Skor', 'Nilai', ''].map(h => el('th', {}, h)))),
         el('tbody', {}, rows)
       ]);
       card.appendChild(el('div', { class: 'table-scroll' }, table));

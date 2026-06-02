@@ -113,7 +113,7 @@ button.btn:disabled { opacity: .45; cursor: not-allowed; }
 
 /* ---- Answer key grid ---- */
 .key-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
-.key-item { display: grid; grid-template-columns: 32px 1fr 1fr 64px; gap: 8px; align-items: center;
+.key-item { display: grid; grid-template-columns: 32px 1fr 64px; gap: 8px; align-items: center;
   background: var(--surface-2); padding: 8px; border-radius: 8px; }
 .key-item .no { font-family: var(--serif); font-weight: 700; text-align: center; color: var(--accent); }
 .key-item select, .key-item input { padding: 6px 8px; font-size: 14px; }
@@ -161,7 +161,7 @@ table.rekap tr:nth-child(even) td { background: var(--surface-2); }
 .kv span { font-size: 13px; color: var(--ink-soft); }
 
 @media (max-width: 560px) {
-  .key-item { grid-template-columns: 28px 1fr 1fr 52px; }
+  .key-item { grid-template-columns: 28px 1fr 52px; }
   header.app h1 { font-size: 19px; }
   main { padding: 16px 12px 80px; }
   .card { padding: 16px; }
