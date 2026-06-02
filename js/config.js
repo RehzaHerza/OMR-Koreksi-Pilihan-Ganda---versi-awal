@@ -9,8 +9,15 @@
 
 const OMR = (function () {
 
-  /* ---------- Penyimpanan (localStorage, 1 user offline) ---------- */
-  const STORAGE_KEY = 'omr_state_v1';
+  /* ---------- Penyimpanan multi-profil (localStorage, offline) ----------
+     - PROFILES_KEY menyimpan daftar guru + profil aktif.
+     - Tiap profil punya data sendiri di kunci DATA_PREFIX + id.
+     - Tetap per-perangkat (localStorage); profil hanya memisahkan data
+       beberapa guru yang berbagi browser yang SAMA.
+  ----------------------------------------------------------------------- */
+  const PROFILES_KEY = 'omr_profiles_v1';
+  const DATA_PREFIX = 'omr_state_v1__';
+  const LEGACY_KEY = 'omr_state_v1';   // data versi single-user (utk migrasi)
 
   const defaultState = () => ({
     config: {
@@ -24,14 +31,37 @@ const OMR = (function () {
     students: []          // [{id,name,kelas,answers:[],score,maxScore,percent,detail:[],ts}]
   });
 
-  let state = load();
+  let profiles = loadProfiles();
+  let state = loadState();
 
-  function load() {
+  function loadProfiles() {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = localStorage.getItem(PROFILES_KEY);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (p && p.list && p.list.length) return p;
+      }
+    } catch (e) { /* lanjut buat baru */ }
+
+    // Pertama kali: buat profil default + migrasi data lama bila ada
+    const id = 'p' + Date.now();
+    const reg = { active: id, list: [{ id, name: 'Guru 1' }] };
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(reg));
+    const legacy = localStorage.getItem(LEGACY_KEY);
+    if (legacy) {
+      localStorage.setItem(DATA_PREFIX + id, legacy); // data lama -> profil pertama
+      localStorage.removeItem(LEGACY_KEY);
+    }
+    return reg;
+  }
+
+  function dataKey() { return DATA_PREFIX + profiles.active; }
+
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(dataKey());
       if (!raw) return defaultState();
       const s = JSON.parse(raw);
-      // jaga-jaga struktur lama
       const d = defaultState();
       return Object.assign(d, s, { config: Object.assign(d.config, s.config || {}) });
     } catch (e) {
@@ -40,12 +70,52 @@ const OMR = (function () {
     }
   }
 
-  function save() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }
+  function save() { localStorage.setItem(dataKey(), JSON.stringify(state)); }
+  function saveProfiles() { localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles)); }
 
   function resetAll() {
     state = defaultState();
+    save();
+  }
+
+  /* ---------- API Profil ---------- */
+  function listProfiles() { return profiles.list.slice(); }
+  function activeProfile() { return profiles.list.find(p => p.id === profiles.active) || profiles.list[0]; }
+
+  function switchProfile(id) {
+    if (!profiles.list.some(p => p.id === id)) return;
+    profiles.active = id; saveProfiles();
+    state = loadState();
+    syncAnswerKeyInternal();
+  }
+  function addProfile(name) {
+    const id = 'p' + Date.now();
+    profiles.list.push({ id, name: (name || '').trim() || ('Guru ' + (profiles.list.length + 1)) });
+    profiles.active = id; saveProfiles();
+    state = loadState(); syncAnswerKeyInternal();
+    return id;
+  }
+  function renameProfile(id, name) {
+    const p = profiles.list.find(x => x.id === id);
+    if (p && name && name.trim()) { p.name = name.trim(); saveProfiles(); }
+  }
+  function deleteProfile(id) {
+    if (profiles.list.length <= 1) return false;        // sisakan minimal 1
+    localStorage.removeItem(DATA_PREFIX + id);          // hapus data profil itu
+    profiles.list = profiles.list.filter(x => x.id !== id);
+    if (profiles.active === id) profiles.active = profiles.list[0].id;
+    saveProfiles();
+    state = loadState(); syncAnswerKeyInternal();
+    return true;
+  }
+
+  function syncAnswerKeyInternal() {
+    const n = state.config.numQuestions;
+    const w = state.config.defaultWeight;
+    const ak = state.answerKey;
+    while (ak.length < n) ak.push({ correct: 'A', half: null, weight: w });
+    ak.length = n;
+    ak.forEach(e => { if (e.weight == null) e.weight = w; });
     save();
   }
 
@@ -123,19 +193,14 @@ const OMR = (function () {
   return {
     get state() { return state; },
     get cfg() { return state.config; },
-    save, resetAll, load,
+    save, resetAll,
     optionLetters, LETTERS,
     LAYOUT, rowsPerColumn, cellNormPos, labelNormPos,
 
+    /* profil guru */
+    listProfiles, activeProfile, switchProfile, addProfile, renameProfile, deleteProfile,
+
     /* sinkronkan panjang answerKey dengan numQuestions */
-    syncAnswerKey() {
-      const n = state.config.numQuestions;
-      const w = state.config.defaultWeight;
-      const ak = state.answerKey;
-      while (ak.length < n) ak.push({ correct: 'A', half: null, weight: w });
-      ak.length = n;
-      ak.forEach(e => { if (e.weight == null) e.weight = w; });
-      save();
-    }
+    syncAnswerKey: syncAnswerKeyInternal
   };
 })();

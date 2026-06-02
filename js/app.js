@@ -19,9 +19,56 @@
 
   let currentScan = null;     // {answers, name, kelas}
   let stream = null;          // kamera
+  let currentTab = 'setup';   // tab aktif (utk render ulang stlh ganti profil)
+
+  /* ---------------- Profile bar ---------------- */
+  function renderProfileBar() {
+    const bar = $('#profile-bar'); if (!bar) return;
+    bar.innerHTML = '';
+    const active = OMR.activeProfile();
+    const sel = el('select', { title: 'Pilih profil guru' },
+      OMR.listProfiles().map(p => {
+        const o = el('option', { value: p.id }); o.textContent = p.name; return o;
+      }));
+    sel.value = active.id;
+    sel.addEventListener('change', e => {
+      OMR.switchProfile(e.target.value);
+      currentScan = null;
+      renderProfileBar();
+      switchTab(currentTab);
+    });
+    bar.appendChild(el('span', { class: 'pf-label' }, 'Profil guru:'));
+    bar.appendChild(sel);
+    bar.appendChild(el('button', { onclick: addProfilePrompt }, '+ Tambah'));
+    bar.appendChild(el('button', { onclick: renameProfilePrompt }, 'Ubah nama'));
+    bar.appendChild(el('button', { class: 'danger', onclick: deleteProfilePrompt }, 'Hapus'));
+  }
+  function addProfilePrompt() {
+    const name = prompt('Nama guru / profil baru:');
+    if (name === null) return;
+    OMR.addProfile(name);
+    currentScan = null;
+    renderProfileBar(); switchTab(currentTab);
+  }
+  function renameProfilePrompt() {
+    const p = OMR.activeProfile();
+    const name = prompt('Ubah nama profil:', p.name);
+    if (name === null) return;
+    OMR.renameProfile(p.id, name);
+    renderProfileBar();
+  }
+  function deleteProfilePrompt() {
+    const p = OMR.activeProfile();
+    if (OMR.listProfiles().length <= 1) { alert('Tidak bisa menghapus satu-satunya profil.'); return; }
+    if (!confirm(`Hapus profil "${p.name}" beserta SEMUA data-nya (kunci & nilai)? Tidak bisa dibatalkan.`)) return;
+    OMR.deleteProfile(p.id);
+    currentScan = null;
+    renderProfileBar(); switchTab(currentTab);
+  }
 
   /* ---------------- Navigasi ---------------- */
   function switchTab(id) {
+    currentTab = id;
     $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
     $$('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
     if (id !== 'scan') stopCamera();
@@ -309,6 +356,7 @@
   /* ---------------- Init ---------------- */
   document.addEventListener('DOMContentLoaded', () => {
     OMR.syncAnswerKey();
+    renderProfileBar();
     $$('nav.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
     switchTab('setup');
   });

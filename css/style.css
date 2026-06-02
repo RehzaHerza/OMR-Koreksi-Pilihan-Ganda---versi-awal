@@ -54,6 +54,24 @@ nav.tabs button {
 nav.tabs button:hover { color: #fff; }
 nav.tabs button.active { color: #fff; border-bottom-color: var(--accent); font-weight: 600; }
 
+/* ---- Profile bar ---- */
+.profile-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 10px 0 12px; border-top: 1px solid rgba(255,255,255,.08); margin-top: 2px;
+}
+.profile-bar .pf-label { font-size: 12px; color: #b9c2cb; }
+.profile-bar select {
+  width: auto; min-width: 140px; padding: 6px 10px; font-size: 13px;
+  background: #34414d; color: #fff; border: 1px solid #475461; border-radius: 7px;
+}
+.profile-bar select:focus { outline: 2px solid var(--accent); }
+.profile-bar button {
+  background: #34414d; color: #e7edf2; border: 1px solid #475461;
+  padding: 6px 11px; font-size: 12px; border-radius: 7px; cursor: pointer; font-family: var(--sans);
+}
+.profile-bar button:hover { background: #3f4d5a; }
+.profile-bar button.danger:hover { background: #5a2b25; border-color: #7a3b33; }
+
 /* ---- Layout ---- */
 main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 80px; }
 .view { display: none; animation: fade .25s ease; }

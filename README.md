@@ -77,8 +77,23 @@ Lalu buka `http://localhost:8000`.
 - Data tersimpan di `localStorage` browser ini saja. Hapus cache = hilang.
   Ekspor rutin ke Excel sebagai cadangan.
 
+## Profil guru (beberapa guru, satu perangkat)
+
+Di header ada **Profil guru**. Tiap profil punya pengaturan, kunci jawaban,
+dan daftar nilai sendiri yang terpisah penuh. Berguna kalau beberapa guru
+memakai komputer/browser yang sama.
+
+- Ganti profil lewat dropdown — data ikut berganti.
+- **+ Tambah** untuk guru baru, **Ubah nama**, **Hapus** (menghapus seluruh
+  data profil itu; minimal satu profil harus tetap ada).
+- Catatan: ini tetap **per-perangkat**. Kalau tiap guru pakai HP/laptop
+  sendiri, datanya memang sudah otomatis terpisah tanpa perlu profil. Profil
+  hanya memisahkan beberapa guru pada browser yang SAMA. Bukan akun terpusat,
+  data tidak tersinkron antar perangkat.
+- Data versi lama (sebelum fitur profil) otomatis dipindah ke profil pertama.
+
 ## Batas versi ini
 
-Single-user, satu set kunci aktif. Untuk banyak ujian/kelas paralel, simpan
-ekspor lalu ganti kunci. (Penyimpanan multi-ujian bisa jadi peningkatan
-berikutnya — tapi selesaikan & pakai versi ini dulu.)
+Penyimpanan lokal per-perangkat (bukan server/cloud, tanpa login). Untuk
+banyak ujian di satu profil, simpan ekspor lalu ganti kunci. Koreksi esai
+dilakukan manual di luar app.
