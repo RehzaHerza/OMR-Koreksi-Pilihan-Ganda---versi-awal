@@ -614,5 +614,11 @@
     const mt = $('#menu-toggle');
     if (mt) mt.addEventListener('click', () => document.querySelector('header.app').classList.toggle('menu-open'));
     switchTab('setup');
+    // app siap -> sembunyikan splash (jaga waktu tampil minimum agar tak berkedip)
+    const splash = document.getElementById('splash');
+    if (splash) {
+      const wait = Math.max(0, 700 - (Date.now() - (window.__splashStart || Date.now())));
+      setTimeout(() => { splash.classList.add('hide'); setTimeout(() => splash.remove(), 500); }, wait);
+    }
   });
 })();
