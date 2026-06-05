@@ -53,6 +53,7 @@ header.app {
 header.app .brand { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
 header.app h1 { font-size: 21px; font-weight: 700; margin: 0; letter-spacing: -.3px; }
 header.app .tag { font-size: 12px; color: #b9d0e4; letter-spacing: .2px; }
+.menu-toggle { display: none; }   /* hanya tampil di mobile */
 nav.tabs { display: flex; gap: 4px; margin-top: 16px; overflow-x: auto; scrollbar-width: none; }
 nav.tabs::-webkit-scrollbar { display: none; }
 nav.tabs button {
@@ -211,17 +212,47 @@ table.rekap tbody tr:hover td { background: var(--brand-soft); }
 
 @media (max-width: 560px) {
   body { font-size: 15px; }
-  /* --- header jauh lebih ringkas di mobile (desktop tak berubah) --- */
-  header.app { padding: 10px 14px 0; }
+  /* --- header ringkas + menu bisa diciutkan (desktop tak berubah) --- */
+  header.app { padding: 10px 14px 11px; }
   header.app h1 { font-size: 16.5px; }
-  header.app .tag { display: none; }                 /* hemat 1 baris */
-  nav.tabs { margin-top: 8px; gap: 2px; }
-  nav.tabs button { padding: 8px 10px 9px; font-size: 12.5px; gap: 6px; }
-  nav.tabs button svg { width: 16px; height: 16px; }
-  .profile-bar { padding: 8px 0 9px; gap: 6px; margin-top: 2px; }
-  .profile-bar .pf-label { font-size: 11.5px; }
-  .profile-bar select { min-width: 120px; padding: 6px 10px; font-size: 12.5px; }
-  .profile-bar button { padding: 6px 10px; font-size: 11.5px; }
+  header.app .tag { display: none; }
+  .brand { align-items: center; }
+
+  .menu-toggle {
+    display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+    background: rgba(255,255,255,.13); color: #fff; border: 1px solid rgba(255,255,255,.24);
+    padding: 7px 12px; border-radius: 9px; font-size: 13px; font-weight: 600;
+    cursor: pointer; font-family: var(--sans);
+  }
+  .menu-toggle svg { width: 18px; height: 18px; }
+  .menu-toggle .ic-close { display: none; }
+  header.app.menu-open .menu-toggle .ic-menu { display: none; }
+  header.app.menu-open .menu-toggle .ic-close { display: inline; }
+
+  /* default tertutup: tab & profil disembunyikan */
+  nav.tabs { display: none; }
+  .profile-bar { display: none; }
+
+  /* saat dibuka: tampil sebagai daftar vertikal */
+  header.app.menu-open nav.tabs {
+    display: flex; flex-direction: column; gap: 3px;
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.12);
+  }
+  header.app.menu-open nav.tabs button {
+    width: 100%; justify-content: flex-start; gap: 11px;
+    padding: 13px 12px; font-size: 14.5px; border-radius: 10px; border-bottom: none;
+  }
+  header.app.menu-open nav.tabs button svg { width: 19px; height: 19px; }
+  header.app.menu-open nav.tabs button.active { background: rgba(255,255,255,.15); color: #fff; border-bottom: none; }
+
+  header.app.menu-open .profile-bar {
+    display: flex; flex-wrap: wrap; gap: 7px;
+    margin-top: 10px; padding: 11px 0 2px; border-top: 1px solid rgba(255,255,255,.12);
+  }
+  .profile-bar .pf-label { font-size: 12px; }
+  .profile-bar select { min-width: 130px; padding: 8px 11px; font-size: 13px; }
+  .profile-bar button { padding: 8px 12px; font-size: 12.5px; }
+
   /* --- isi --- */
   main { padding: 18px 13px 90px; }
   .card { padding: 18px 16px; border-radius: var(--r); }

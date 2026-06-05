@@ -74,6 +74,7 @@
     currentTab = id;
     $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
     $$('nav.tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+    const hdr = document.querySelector('header.app'); if (hdr) hdr.classList.remove('menu-open'); // tutup menu mobile
     if (id !== 'scan') stopCamera();
     ({ setup: renderSetup, key: renderKey, sheet: renderSheet, scan: renderScan, results: renderResults }[id])();
   }
@@ -502,6 +503,8 @@
     OMR.syncAnswerKey();
     renderProfileBar();
     $$('nav.tabs button').forEach(b => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+    const mt = $('#menu-toggle');
+    if (mt) mt.addEventListener('click', () => document.querySelector('header.app').classList.toggle('menu-open'));
     switchTab('setup');
   });
 })();
