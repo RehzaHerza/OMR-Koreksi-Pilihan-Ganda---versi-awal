@@ -150,6 +150,7 @@
     OMR.cfg.numQuestions = clamp(+$('#cfg-q').value, 1, 100);
     OMR.cfg.numOptions = +$('#cfg-o').value;
     OMR.cfg.columns = +$('#cfg-col').value;
+    const prevWeight = OMR.cfg.defaultWeight;
     OMR.cfg.defaultWeight = Math.max(0.1, +$('#cfg-w').value);
     if ($('#cfg-titlelines')) OMR.cfg.titleLines = $('#cfg-titlelines').value;
     if ($('#cfg-mapel')) OMR.cfg.mapel = $('#cfg-mapel').value;
@@ -158,6 +159,10 @@
     if ($('#cfg-essay')) OMR.cfg.hasEssay = ($('#cfg-essay').value === 'Ya');
     if ($('#cfg-essayn')) OMR.cfg.essayCount = clamp(+$('#cfg-essayn').value, 1, 20);
     OMR.syncAnswerKey();
+    if (OMR.cfg.defaultWeight !== prevWeight) {
+      OMR.state.answerKey.forEach(e => e.weight = OMR.cfg.defaultWeight);
+      OMR.save();
+    }
     if (!silent) toast('Pengaturan tersimpan.', 'ok', '#view-setup');
   }
   function resetEverything() {
@@ -191,6 +196,7 @@
     card.appendChild(grid);
     card.appendChild(el('div', { class: 'btn-row' }, [
       el('button', { class: 'btn ghost', onclick: () => { OMR.state.answerKey.forEach(k => k.correct = letters[0]); OMR.save(); renderKey(); } }, 'Set semua → ' + letters[0]),
+      el('button', { class: 'btn ghost', onclick: () => { const w = OMR.cfg.defaultWeight; OMR.state.answerKey.forEach(k => k.weight = w); OMR.save(); renderKey(); toast('Semua bobot disamakan ke ' + w + '.', 'ok', '#view-key'); } }, 'Samakan bobot → ' + OMR.cfg.defaultWeight),
       el('button', { class: 'btn accent', onclick: () => toast('Kunci tersimpan otomatis.', 'ok', '#view-key') }, 'Selesai')
     ]));
     wrap.appendChild(card);
