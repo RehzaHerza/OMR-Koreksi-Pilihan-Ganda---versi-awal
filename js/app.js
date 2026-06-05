@@ -91,7 +91,7 @@
       mkField('Jumlah soal', mkInput('number', c.numQuestions, v => c.numQuestions = clamp(+v, 1, 100), 'cfg-q', { min: 1, max: 100 })),
       mkField('Jumlah opsi (A–…)', mkSelect([3, 4, 5, 6], c.numOptions, v => c.numOptions = +v, 'cfg-o')),
       mkField('Kolom di lembar', mkSelect([1, 2, 3], c.columns, v => c.columns = +v, 'cfg-col')),
-      mkField('Bobot default / soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(0.1, +v), 'cfg-w', { min: .5, step: .5 }))
+      mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(0.1, +v), 'cfg-w', { min: .5, step: .5 }))
     ]);
     card.appendChild(form);
 
@@ -150,7 +150,6 @@
     OMR.cfg.numQuestions = clamp(+$('#cfg-q').value, 1, 100);
     OMR.cfg.numOptions = +$('#cfg-o').value;
     OMR.cfg.columns = +$('#cfg-col').value;
-    const prevWeight = OMR.cfg.defaultWeight;
     OMR.cfg.defaultWeight = Math.max(0.1, +$('#cfg-w').value);
     if ($('#cfg-titlelines')) OMR.cfg.titleLines = $('#cfg-titlelines').value;
     if ($('#cfg-mapel')) OMR.cfg.mapel = $('#cfg-mapel').value;
@@ -159,11 +158,9 @@
     if ($('#cfg-essay')) OMR.cfg.hasEssay = ($('#cfg-essay').value === 'Ya');
     if ($('#cfg-essayn')) OMR.cfg.essayCount = clamp(+$('#cfg-essayn').value, 1, 20);
     OMR.syncAnswerKey();
-    if (OMR.cfg.defaultWeight !== prevWeight) {
-      OMR.state.answerKey.forEach(e => e.weight = OMR.cfg.defaultWeight);
-      OMR.save();
-    }
-    if (!silent) toast('Pengaturan tersimpan.', 'ok', '#view-setup');
+    OMR.state.answerKey.forEach(e => e.weight = OMR.cfg.defaultWeight); // bobot ini berlaku ke SEMUA soal
+    OMR.save();
+    if (!silent) toast('Pengaturan tersimpan. Semua soal kini berbobot ' + OMR.cfg.defaultWeight + '.', 'ok', '#view-setup');
   }
   function resetEverything() {
     if (!confirm('Hapus SEMUA data (pengaturan, kunci, & nilai siswa)? Tidak bisa dibatalkan.')) return;
@@ -195,8 +192,7 @@
     });
     card.appendChild(grid);
     card.appendChild(el('div', { class: 'btn-row' }, [
-      el('button', { class: 'btn ghost', onclick: () => { OMR.state.answerKey.forEach(k => k.correct = letters[0]); OMR.save(); renderKey(); } }, 'Set semua → ' + letters[0]),
-      el('button', { class: 'btn ghost', onclick: () => { const w = OMR.cfg.defaultWeight; OMR.state.answerKey.forEach(k => k.weight = w); OMR.save(); renderKey(); toast('Semua bobot disamakan ke ' + w + '.', 'ok', '#view-key'); } }, 'Samakan bobot → ' + OMR.cfg.defaultWeight),
+      el('button', { class: 'btn ghost', onclick: () => { OMR.state.answerKey.forEach(k => k.correct = letters[0]); OMR.save(); renderKey(); } }, 'Set semua jawaban → ' + letters[0]),
       el('button', { class: 'btn accent', onclick: () => toast('Kunci tersimpan otomatis.', 'ok', '#view-key') }, 'Selesai')
     ]));
     wrap.appendChild(card);
