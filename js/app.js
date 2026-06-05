@@ -29,7 +29,7 @@
     const bar = $('#profile-bar'); if (!bar) return;
     bar.innerHTML = '';
     const active = OMR.activeProfile();
-    const sel = el('select', { title: 'Pilih profil guru' },
+    const sel = el('select', { title: 'Pilih kelas' },
       OMR.listProfiles().map(p => {
         const o = el('option', { value: p.id }); o.textContent = p.name; return o;
       }));
@@ -40,14 +40,14 @@
       renderProfileBar();
       switchTab(currentTab);
     });
-    bar.appendChild(el('span', { class: 'pf-label' }, 'Profil guru:'));
+    bar.appendChild(el('span', { class: 'pf-label' }, 'Kelas:'));
     bar.appendChild(sel);
     bar.appendChild(el('button', { onclick: addProfilePrompt }, '+ Tambah'));
     bar.appendChild(el('button', { onclick: renameProfilePrompt }, 'Ubah nama'));
     bar.appendChild(el('button', { class: 'danger', onclick: deleteProfilePrompt }, 'Hapus'));
   }
   function addProfilePrompt() {
-    const name = prompt('Nama guru / profil baru:');
+    const name = prompt('Nama kelas baru (mis. X TKP):');
     if (name === null) return;
     OMR.addProfile(name);
     currentScan = null;
@@ -55,15 +55,15 @@
   }
   function renameProfilePrompt() {
     const p = OMR.activeProfile();
-    const name = prompt('Ubah nama profil:', p.name);
+    const name = prompt('Ubah nama kelas:', p.name);
     if (name === null) return;
     OMR.renameProfile(p.id, name);
     renderProfileBar();
   }
   function deleteProfilePrompt() {
     const p = OMR.activeProfile();
-    if (OMR.listProfiles().length <= 1) { alert('Tidak bisa menghapus satu-satunya profil.'); return; }
-    if (!confirm(`Hapus profil "${p.name}" beserta SEMUA data-nya (kunci & nilai)? Tidak bisa dibatalkan.`)) return;
+    if (OMR.listProfiles().length <= 1) { alert('Tidak bisa menghapus satu-satunya kelas.'); return; }
+    if (!confirm(`Hapus kelas "${p.name}" beserta SEMUA data-nya (kunci, daftar nama & nilai)? Tidak bisa dibatalkan.`)) return;
     OMR.deleteProfile(p.id);
     currentScan = null;
     renderProfileBar(); switchTab(currentTab);
@@ -124,6 +124,105 @@
 
     // --- Manajemen Model Lembar ---
     renderModelCard();
+    // --- Daftar Nama Siswa (roster kelas ini) ---
+    renderRosterCard();
+  }
+
+  /* Ubah teks/tempel jadi array nama (1 nama per baris; abaikan kolom angka) */
+  function parseRosterText(text) {
+    return dedupeNames(text.split(/\r?\n/).map(line => pickName(line.split(/[\t,;]+/))).filter(Boolean));
+  }
+  const HEADER_WORDS = new Set(['no', 'no.', 'nomor', 'nama', 'nama siswa', 'name', 'siswa', 'nis']);
+  function pickName(cells) {
+    cells = cells.map(c => String(c).trim()).filter(Boolean);
+    if (!cells.length) return '';
+    let name;
+    if (cells.length === 1) name = cells[0];
+    else {
+      const names = cells.filter(c => !/^\d+([.,]\d+)?$/.test(c)); // buang sel angka murni (No)
+      name = (names.sort((a, b) => b.length - a.length)[0]) || cells[cells.length - 1];
+    }
+    if (HEADER_WORDS.has(name.toLowerCase())) return ''; // lewati baris judul
+    return name;
+  }
+  function dedupeNames(arr) {
+    const seen = new Set(), out = [];
+    arr.forEach(n => { const k = n.toLowerCase(); if (n && !seen.has(k)) { seen.add(k); out.push(n); } });
+    return out;
+  }
+  function addNamesToRoster(names) {
+    if (!names.length) { toast('Tidak ada nama terbaca.', 'warn', '#view-setup'); return; }
+    OMR.state.roster = dedupeNames((OMR.state.roster || []).concat(names));
+    OMR.save(); renderRosterCard();
+    toast(names.length + ' nama ditambahkan. Total ' + OMR.state.roster.length + ' nama.', 'ok', '#view-setup');
+  }
+  function importRosterFile(e) {
+    const f = e.target.files[0]; if (!f) return;
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    const reader = new FileReader();
+    if (ext === 'xlsx' || ext === 'xls') {
+      reader.onload = ev => {
+        try {
+          const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+          addNamesToRoster(dedupeNames(rows.map(r => pickName(r)).filter(Boolean)));
+        } catch (err) { toast('Gagal membaca file Excel.', 'err', '#view-setup'); }
+      };
+      reader.readAsArrayBuffer(f);
+    } else { // csv / txt
+      reader.onload = ev => addNamesToRoster(parseRosterText(ev.target.result));
+      reader.readAsText(f);
+    }
+    e.target.value = '';
+  }
+
+  function downloadRosterTemplate() {
+    try {
+      const aoa = [['No', 'Nama Siswa'],
+        [1, 'Budi Santoso'], [2, 'Siti Aminah'], [3, 'Ahmad Fauzi'],
+        [4, ''], [5, ''], [6, ''], [7, ''], [8, '']];
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws['!cols'] = [{ wch: 6 }, { wch: 32 }];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Daftar Siswa');
+      XLSX.writeFile(wb, 'Template Daftar Nama Siswa.xlsx');
+    } catch (e) { toast('Gagal membuat template.', 'err', '#view-setup'); }
+  }
+
+  function renderRosterCard() {
+    const roster = OMR.state.roster || [];
+    const card = el('div', { class: 'card' }, [
+      el('h2', {}, 'Daftar Nama Siswa'),
+      el('p', { class: 'sub' }, 'Daftar nama untuk kelas "' + OMR.activeProfile().name + '". Saat scan, nama tinggal dipilih (tak perlu diketik). Tempel nama (1 per baris) dari Excel, atau impor file. Belum punya format? Unduh template dulu, isi kolom Nama, lalu impor kembali.')
+    ]);
+    const ta = el('textarea', { id: 'roster-paste', rows: '4', placeholder: 'Tempel nama di sini, satu nama per baris…\nBudi Santoso\nSiti Aminah\n…' });
+    card.appendChild(ta);
+    card.appendChild(el('div', { class: 'btn-row' }, [
+      el('button', { class: 'btn accent', onclick: () => { addNamesToRoster(parseRosterText($('#roster-paste').value)); $('#roster-paste').value = ''; } }, 'Tambah dari teks'),
+      el('button', { class: 'btn ghost', onclick: () => $('#roster-file').click() }, 'Impor file (Excel/CSV)'),
+      el('button', { class: 'btn ghost', onclick: downloadRosterTemplate }, 'Unduh Template'),
+      el('input', { type: 'file', id: 'roster-file', accept: '.xlsx,.xls,.csv,.txt', style: 'display:none', onchange: importRosterFile })
+    ]));
+    if (roster.length) {
+      card.appendChild(el('h3', { class: 'section' }, roster.length + ' nama tersimpan'));
+      const chips = el('div', { class: 'chips' });
+      roster.forEach((n, i) => {
+        chips.appendChild(el('span', { class: 'chip' }, [
+          document.createTextNode(n),
+          el('button', { class: 'chip-x', title: 'Hapus', onclick: () => { OMR.state.roster.splice(i, 1); OMR.save(); renderRosterCard(); } }, '×')
+        ]));
+      });
+      card.appendChild(chips);
+      card.appendChild(el('div', { class: 'btn-row' }, [
+        el('button', { class: 'btn ghost sm', onclick: () => { if (confirm('Kosongkan seluruh daftar nama kelas ini?')) { OMR.state.roster = []; OMR.save(); renderRosterCard(); } } }, 'Kosongkan daftar nama')
+      ]));
+    } else {
+      card.appendChild(el('div', { class: 'empty', style: 'padding:16px' }, 'Belum ada nama. Tempel atau impor daftar nama siswa kelas ini.'));
+    }
+    // ganti kartu lama bila sudah ada (agar tdk dobel saat renderRosterCard dipanggil ulang)
+    const old = $('#roster-card'); if (old) old.remove();
+    card.id = 'roster-card';
+    $('#view-setup').appendChild(card);
   }
 
   function renderModelCard() {
@@ -343,6 +442,18 @@
     img.src = URL.createObjectURL(f);
   }
 
+  function nameField() {
+    const roster = OMR.state.roster || [];
+    const input = mkInput('text', '', v => currentScan.name = v, 'st-name');
+    input.setAttribute('placeholder', roster.length ? 'Ketik atau pilih nama…' : 'Ketik nama siswa…');
+    const field = mkField('Nama siswa  ·  kelas: ' + currentScan.kelas, input);
+    if (roster.length) {
+      input.setAttribute('list', 'roster-dl');
+      field.appendChild(el('datalist', { id: 'roster-dl' }, roster.map(n => el('option', { value: n }))));
+    }
+    return el('div', { class: 'grid-form', style: 'margin-top:14px' }, [field]);
+  }
+
   function runPipeline(src, w, h, liveMode) {
     OMR.syncAnswerKey();
     const res = OMRCV.process(src, w, h, OMR.cfg);
@@ -352,17 +463,14 @@
       if (liveMode) box.appendChild(el('div', { class: 'btn-row' }, [el('button', { class: 'btn', onclick: resumeLive }, 'Coba Lagi')]));
       return;
     }
-    currentScan = { answers: res.answers.slice(), name: '', kelas: '' };
+    currentScan = { answers: res.answers.slice(), name: '', kelas: OMR.activeProfile().name };
     const dbg = el('canvas');
     OMRCV.drawDebug(dbg, res);
 
     box.appendChild(el('h3', { class: 'section' }, 'Verifikasi pembacaan'));
     box.appendChild(notice('Periksa overlay: lingkaran merah = marker, kotak biru = titik baca. Soal bertanda kuning perlu Anda pastikan (kosong/ganda).', 'warn'));
     box.appendChild(el('div', { class: 'canvas-wrap' }, dbg));
-    box.appendChild(el('div', { class: 'grid-form', style: 'margin-top:14px' }, [
-      mkField('Nama siswa', mkInput('text', '', v => currentScan.name = v, 'st-name')),
-      mkField('Kelas', mkInput('text', '', v => currentScan.kelas = v, 'st-kelas'))
-    ]));
+    box.appendChild(nameField());
     box.appendChild(el('h3', { class: 'section' }, 'Jawaban terbaca (bisa dikoreksi)'));
     box.appendChild(el('div', { id: 'review' }));
     box.appendChild(el('div', { id: 'score-preview' }));

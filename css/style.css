@@ -210,6 +210,12 @@ table.rekap tbody tr:hover td { background: var(--brand-soft); }
 .kv { display: flex; gap: 16px; flex-wrap: wrap; margin: 14px 0 0; align-items: center; }
 .kv span { font-size: 13.5px; color: var(--ink-soft); }
 
+textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
+.chip { display: inline-flex; align-items: center; gap: 7px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 20px; padding: 5px 6px 5px 13px; font-size: 13px; color: var(--ink); }
+.chip-x { border: none; background: var(--line); color: var(--ink-soft); width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; font-family: var(--sans); }
+.chip-x:hover { background: var(--accent); color: #fff; }
+
 @media (max-width: 560px) {
   body { font-size: 15px; }
   /* --- header ringkas + menu bisa diciutkan (desktop tak berubah) --- */

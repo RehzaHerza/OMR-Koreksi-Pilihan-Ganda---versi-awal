@@ -37,7 +37,8 @@ const OMR = (function () {
     },
     answerKey: [],        // [{correct:'B', weight:1}, ...]
     students: [],         // [{id,name,kelas,answers:[],score,maxScore,percent,detail:[],ts}]
-    models: []            // [{id,name,config,answerKey}] -> template lembar tersimpan
+    models: [],           // [{id,name,config,answerKey}] -> template lembar tersimpan
+    roster: []            // daftar nama siswa kelas ini (utk pilih saat scan)
   });
 
   let profiles = loadProfiles();
@@ -54,7 +55,7 @@ const OMR = (function () {
 
     // Pertama kali: buat profil default + migrasi data lama bila ada
     const id = uid('p');
-    const reg = { active: id, list: [{ id, name: 'Guru 1' }] };
+    const reg = { active: id, list: [{ id, name: 'Kelas 1' }] };
     localStorage.setItem(PROFILES_KEY, JSON.stringify(reg));
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
@@ -104,7 +105,7 @@ const OMR = (function () {
   }
   function addProfile(name) {
     const id = uid('p');
-    profiles.list.push({ id, name: (name || '').trim() || ('Guru ' + (profiles.list.length + 1)) });
+    profiles.list.push({ id, name: (name || '').trim() || ('Kelas ' + (profiles.list.length + 1)) });
     profiles.active = id; saveProfiles();
     state = loadState(); syncAnswerKeyInternal();
     return id;
