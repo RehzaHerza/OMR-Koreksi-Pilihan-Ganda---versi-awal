@@ -90,13 +90,13 @@ const OMRSheet = (function () {
     const L = OMR.LAYOUT, letters = OMR.optionLetters(cfg.numOptions);
     const rpc = OMR.rowsPerColumn(cfg);
     const availW = 1 - 2 * L.marginX, availH = 1 - L.marginTop - L.marginBottom;
-    const colW = availW / cfg.columns, rowH = availH / rpc;
+    const colW = (availW - L.colGap * (cfg.columns - 1)) / cfg.columns, rowH = availH / rpc;
     const rectH = PAGE_H * (1 - 2 * FID_MARGIN_Y);   // tinggi persegi marker (px)
     const rowPx = rowH * rectH;
     const HEAD_H = 32;                                // tinggi header tabel (tetap)
 
     for (let col = 0; col < cfg.columns; col++) {
-      const colX0 = L.marginX + col * colW;
+      const colX0 = L.marginX + col * (colW + L.colGap);
       const optX0 = colX0 + colW * L.qLabelFrac;
       const optW = colW * L.optAreaFrac, boxW = optW / cfg.numOptions;
       const nRows = Math.min(rpc, cfg.numQuestions - col * rpc);

@@ -149,8 +149,9 @@ const OMR = (function () {
     marginX: 0.05,        // margin kiri/kanan area soal (dlm ruang marker)
     marginTop: 0.25,      // ruang header resmi (judul + identitas + sub-judul)
     marginBottom: 0.06,   // ruang kotak Nilai (mode tanpa esai)
-    qLabelFrac: 0.18,     // porsi lebar kolom untuk nomor soal
-    optAreaFrac: 0.80,    // porsi lebar kolom untuk deretan kotak opsi
+    colGap: 0.045,        // jarak antar blok kolom (kiri-kanan terpisah)
+    qLabelFrac: 0.14,     // porsi lebar kolom untuk nomor soal (lebih kecil)
+    optAreaFrac: 0.86,    // = 1 - qLabelFrac -> opsi mengisi penuh kolom (semua kotak sama lebar)
     boxFillW: 0.62,       // ukuran sampling relatif lebar 1 kotak
     boxFillH: 0.52        // ukuran sampling relatif tinggi 1 baris
   };
@@ -169,9 +170,9 @@ const OMR = (function () {
 
     const availW = 1 - 2 * L.marginX;
     const availH = 1 - L.marginTop - L.marginBottom;
-    const colW = availW / cfg.columns;
+    const colW = (availW - L.colGap * (cfg.columns - 1)) / cfg.columns;
 
-    const colX0 = L.marginX + col * colW;
+    const colX0 = L.marginX + col * (colW + L.colGap);
     const rowH = availH / rpc;
     const vCenter = L.marginTop + rowH * (row + 0.5);
 
@@ -197,8 +198,8 @@ const OMR = (function () {
     const row = q % rpc;
     const availW = 1 - 2 * L.marginX;
     const availH = 1 - L.marginTop - L.marginBottom;
-    const colW = availW / cfg.columns;
-    const colX0 = L.marginX + col * colW;
+    const colW = (availW - L.colGap * (cfg.columns - 1)) / cfg.columns;
+    const colX0 = L.marginX + col * (colW + L.colGap);
     const rowH = availH / rpc;
     return { u: colX0 + colW * 0.02, v: L.marginTop + rowH * (row + 0.5) };
   }
