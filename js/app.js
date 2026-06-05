@@ -91,7 +91,7 @@
       mkField('Jumlah soal', mkInput('number', c.numQuestions, v => c.numQuestions = clamp(+v, 1, 100), 'cfg-q', { min: 1, max: 100 })),
       mkField('Jumlah opsi (A–…)', mkSelect([3, 4, 5, 6], c.numOptions, v => c.numOptions = +v, 'cfg-o')),
       mkField('Kolom di lembar', mkSelect([1, 2, 3], c.columns, v => c.columns = +v, 'cfg-col')),
-      mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(0.1, +v), 'cfg-w', { min: .5, step: .5 }))
+      mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(1, Math.round(+v) || 1), 'cfg-w', { min: 1, step: 1 }))
     ]);
     card.appendChild(form);
 
@@ -150,7 +150,7 @@
     OMR.cfg.numQuestions = clamp(+$('#cfg-q').value, 1, 100);
     OMR.cfg.numOptions = +$('#cfg-o').value;
     OMR.cfg.columns = +$('#cfg-col').value;
-    OMR.cfg.defaultWeight = Math.max(0.1, +$('#cfg-w').value);
+    OMR.cfg.defaultWeight = Math.max(1, Math.round(+$('#cfg-w').value) || 1);
     if ($('#cfg-titlelines')) OMR.cfg.titleLines = $('#cfg-titlelines').value;
     if ($('#cfg-mapel')) OMR.cfg.mapel = $('#cfg-mapel').value;
     if ($('#cfg-hari')) OMR.cfg.hariTanggal = $('#cfg-hari').value;
@@ -183,7 +183,7 @@
       const corr = el('select', {}, letters.map(L => optEl(L, L)));
       corr.value = k.correct;
       corr.addEventListener('change', e => { k.correct = e.target.value; OMR.save(); });
-      const wt = mkInput('number', k.weight ?? 1, v => { k.weight = Math.max(0.1, +v || 1); OMR.save(); }, '', { min: .5, step: .5 });
+      const wt = mkInput('number', k.weight ?? 1, v => { k.weight = Math.max(1, Math.round(+v) || 1); OMR.save(); }, '', { min: 1, step: 1 });
       grid.appendChild(el('div', { class: 'key-item' }, [
         el('div', { class: 'no' }, String(i + 1)),
         el('div', {}, [el('div', { class: 'lbl' }, 'Benar'), corr]),
