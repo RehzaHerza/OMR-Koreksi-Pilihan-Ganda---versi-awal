@@ -617,7 +617,7 @@
     // app siap -> sembunyikan splash (jaga waktu tampil minimum agar tak berkedip)
     const splash = document.getElementById('splash');
     if (splash) {
-      const wait = Math.max(0, 700 - (Date.now() - (window.__splashStart || Date.now())));
+      const wait = Math.max(0, 2200 - (Date.now() - (window.__splashStart || Date.now())));
       setTimeout(() => { splash.classList.add('hide'); setTimeout(() => splash.remove(), 500); }, wait);
     }
   });
