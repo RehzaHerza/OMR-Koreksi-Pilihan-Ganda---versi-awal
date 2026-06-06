@@ -1,0 +1,9 @@
+GAMBAR LAYAR PEMBUKA (SPLASH)
+=============================
+Folder ini berisi:
+- logo-sekolah.png  -> logo sekolah (latar transparan). Timpa file ini utk ganti.
+- sekolah-bg.jpg    -> foto latar belakang sekolah. Timpa file ini utk ganti
+                       (disarankan landscape, <500 KB).
+
+Nama sekolah: buka index.html, cari <div class="sp-school">SMKN 1 MANGGAR</div>
+dan ubah tulisannya.
