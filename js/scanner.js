@@ -209,8 +209,12 @@ const OMRCV = (function () {
     const letters = OMR.optionLetters(cfg.numOptions);
     const answers = [];
     const samplePts = [];   // utk overlay debug
-    const MIN_FILL = 0.045; // rasio min agar dianggap "ada coretan"
-    const DOMINANCE = 1.6;  // teratas hrs > 1.6x kedua agar tak ambigu
+    // Ambang ADAPTIF: kotak dianggap tercoret bila jelas lebih gelap dari
+    // kotak-kotak KOSONG milik siswa itu sendiri di baris yg sama (baseline),
+    // bukan dibanding satu angka tetap. Lebih tahan thd coretan kecil & noda.
+    const EMPTY_FLOOR = 0.018; // batas absolut minimum agar tak menangkap noise halus
+    const MARK_MARGIN = 0.022; // harus segini lebih gelap dari baseline utk dianggap coretan
+    const DOMINANCE = 1.5;    // teratas hrs > 1.5x kedua agar tak dianggap ganda
 
     for (let q = 0; q < cfg.numQuestions; q++) {
       const ratios = [];
@@ -225,15 +229,23 @@ const OMRCV = (function () {
         ratios.push(r);
         samplePts.push({ px, py, bw, bh, q, o });
       }
-      // tentukan jawaban
+      // baseline = rata-rata kotak paling terang (kosong) di baris ini
+      const k = Math.max(1, cfg.numOptions - 2);
+      const sorted = ratios.slice().sort((a, b) => a - b);
+      let baseline = 0;
+      for (let i = 0; i < k; i++) baseline += sorted[i];
+      baseline /= k;
+      // dua tertinggi
       let max1 = 0, idx1 = -1, max2 = 0;
       ratios.forEach((r, i) => {
         if (r > max1) { max2 = max1; max1 = r; idx1 = i; }
         else if (r > max2) { max2 = r; }
       });
+      const isMark = r => (r - baseline) >= MARK_MARGIN && r >= EMPTY_FLOOR;
+      const nMarked = ratios.filter(isMark).length;
       let ans;
-      if (max1 < MIN_FILL) ans = '-';                 // kosong
-      else if (max2 > 0 && max1 < max2 * DOMINANCE) ans = '?'; // ambigu/ganda
+      if (nMarked === 0 || !isMark(max1)) ans = '-';                       // kosong
+      else if (nMarked >= 2 && isMark(max2) && max1 < max2 * DOMINANCE) ans = '?'; // ganda
       else ans = letters[idx1];
       answers.push(ans);
     }
