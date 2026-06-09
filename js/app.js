@@ -46,24 +46,24 @@
     bar.appendChild(el('button', { onclick: renameProfilePrompt }, 'Ubah nama'));
     bar.appendChild(el('button', { class: 'danger', onclick: deleteProfilePrompt }, 'Hapus'));
   }
-  function addProfilePrompt() {
-    const name = prompt('Nama kelas baru (mis. X TKP):');
+  async function addProfilePrompt() {
+    const name = await modalPrompt('Nama kelas baru (mis. X TKP):');
     if (name === null) return;
     OMR.addProfile(name);
     currentScan = null;
     renderProfileBar(); switchTab(currentTab);
   }
-  function renameProfilePrompt() {
+  async function renameProfilePrompt() {
     const p = OMR.activeProfile();
-    const name = prompt('Ubah nama kelas:', p.name);
+    const name = await modalPrompt('Ubah nama kelas:', p.name);
     if (name === null) return;
     OMR.renameProfile(p.id, name);
     renderProfileBar();
   }
-  function deleteProfilePrompt() {
+  async function deleteProfilePrompt() {
     const p = OMR.activeProfile();
-    if (OMR.listProfiles().length <= 1) { alert('Tidak bisa menghapus satu-satunya kelas.'); return; }
-    if (!confirm(`Hapus kelas "${p.name}" beserta SEMUA data-nya (kunci, daftar nama & nilai)? Tidak bisa dibatalkan.`)) return;
+    if (OMR.listProfiles().length <= 1) { await modalAlert('Tidak bisa menghapus satu-satunya kelas.'); return; }
+    if (!(await modalConfirm(`Hapus kelas "${p.name}" beserta SEMUA data-nya (kunci, daftar nama & nilai)? Tindakan ini tidak bisa dibatalkan.`, { danger: true, okText: 'Hapus' }))) return;
     OMR.deleteProfile(p.id);
     currentScan = null;
     renderProfileBar(); switchTab(currentTab);
@@ -214,7 +214,7 @@
       });
       card.appendChild(chips);
       card.appendChild(el('div', { class: 'btn-row' }, [
-        el('button', { class: 'btn ghost sm', onclick: () => { if (confirm('Kosongkan seluruh daftar nama kelas ini?')) { OMR.state.roster = []; OMR.save(); renderRosterCard(); } } }, 'Kosongkan daftar nama')
+        el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Kosongkan seluruh daftar nama kelas ini?', { danger: true, okText: 'Kosongkan' })) { OMR.state.roster = []; OMR.save(); renderRosterCard(); } } }, 'Kosongkan daftar nama')
       ]));
     } else {
       card.appendChild(el('div', { class: 'empty', style: 'padding:16px' }, 'Belum ada nama. Tempel atau impor daftar nama siswa kelas ini.'));
@@ -236,11 +236,11 @@
       const sel = el('select', { id: 'model-sel', style: 'width:auto;min-width:200px' }, models.map(m => { const o = el('option', { value: m.id }); o.textContent = m.name; return o; }));
       row.appendChild(sel);
       row.appendChild(el('button', { class: 'btn', onclick: () => { OMR.loadModel($('#model-sel').value); renderSetup(); toast('Model dimuat. Pengaturan & kunci diperbarui.', 'ok', '#view-setup'); } }, 'Muat'));
-      row.appendChild(el('button', { class: 'btn ghost', onclick: () => { const m = models.find(x => x.id === $('#model-sel').value); if (m && confirm('Hapus model "' + m.name + '"?')) { OMR.deleteModel(m.id); renderSetup(); } } }, 'Hapus'));
+      row.appendChild(el('button', { class: 'btn ghost', onclick: async () => { const m = models.find(x => x.id === $('#model-sel').value); if (m && await modalConfirm('Hapus model "' + m.name + '"?', { danger: true, okText: 'Hapus' })) { OMR.deleteModel(m.id); renderSetup(); } } }, 'Hapus'));
     } else {
       card.appendChild(el('div', { class: 'empty', style: 'padding:14px' }, 'Belum ada model tersimpan.'));
     }
-    row.appendChild(el('button', { class: 'btn accent', onclick: () => { const n = prompt('Simpan pengaturan + kunci saat ini sebagai model bernama:', OMR.cfg.examTitle); if (n === null) return; saveSetup(true); OMR.saveModel(n); renderSetup(); toast('Model "' + (n || OMR.cfg.examTitle) + '" tersimpan.', 'ok', '#view-setup'); } }, '+ Simpan sebagai Model'));
+    row.appendChild(el('button', { class: 'btn accent', onclick: async () => { const n = await modalPrompt('Simpan sebagai Model — beri nama:', OMR.cfg.examTitle); if (n === null) return; saveSetup(true); OMR.saveModel(n); renderSetup(); toast('Model "' + (n || OMR.cfg.examTitle) + '" tersimpan.', 'ok', '#view-setup'); } }, '+ Simpan sebagai Model'));
     card.appendChild(row);
     $('#view-setup').appendChild(card);
   }
@@ -262,8 +262,8 @@
     OMR.save();
     if (!silent) toast('Pengaturan tersimpan. Semua soal kini berbobot ' + OMR.cfg.defaultWeight + '.', 'ok', '#view-setup');
   }
-  function resetEverything() {
-    if (!confirm('Hapus SEMUA data (pengaturan, kunci, & nilai siswa)? Tidak bisa dibatalkan.')) return;
+  async function resetEverything() {
+    if (!(await modalConfirm('Hapus SEMUA data (pengaturan, kunci, & nilai siswa)? Tindakan ini tidak bisa dibatalkan.', { danger: true, okText: 'Hapus Semua' }))) return;
     OMR.resetAll(); OMR.syncAnswerKey(); renderSetup();
     toast('Semua data direset.', 'warn', '#view-setup');
   }
@@ -566,7 +566,7 @@
           el('td', { html: `<span class="stat salah">${salah}</span>` }),
           el('td', {}, `${s.score} / ${s.maxScore}`),
           el('td', { html: `<span class="pill">${s.percent}</span>` }),
-          el('td', {}, el('button', { class: 'btn ghost sm', onclick: () => { if (confirm('Hapus ' + s.name + '?')) { OMR.state.students.splice(i, 1); OMR.save(); renderResults(); } } }, 'Hapus'))
+          el('td', {}, el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Hapus ' + s.name + '?', { danger: true, okText: 'Hapus' })) { OMR.state.students.splice(i, 1); OMR.save(); renderResults(); } } }, 'Hapus'))
         ]);
       });
       const table = el('table', { class: 'rekap' }, [
@@ -577,12 +577,40 @@
     }
     wrap.appendChild(card);
   }
-  function clearStudents() {
-    if (!confirm('Kosongkan seluruh daftar nilai? (kunci & pengaturan tetap)')) return;
+  async function clearStudents() {
+    if (!(await modalConfirm('Kosongkan seluruh daftar nilai? (kunci & pengaturan tetap)', { danger: true, okText: 'Kosongkan' }))) return;
     OMR.state.students = []; OMR.save(); renderResults();
   }
 
   /* ---------------- Helpers ---------------- */
+  /* Modal custom (pengganti alert/confirm/prompt bawaan browser) */
+  function modal({ title, message, input, defaultValue, okText = 'OK', cancelText = 'Batal', danger = false, showCancel = true }) {
+    return new Promise(resolve => {
+      const back = el('div', { class: 'modal-back' });
+      const card = el('div', { class: 'modal-card' });
+      if (title) card.appendChild(el('div', { class: 'modal-title' }, title));
+      if (message) card.appendChild(el('div', { class: 'modal-msg' }, message));
+      let field = null;
+      if (input) { field = el('input', { type: 'text', class: 'modal-input', value: defaultValue || '' }); card.appendChild(field); }
+      const okBtn = el('button', { class: 'btn ' + (danger ? 'btn-danger' : 'accent') }, okText);
+      const cancelBtn = el('button', { class: 'btn ghost' }, cancelText);
+      card.appendChild(el('div', { class: 'modal-row' }, showCancel ? [cancelBtn, okBtn] : [okBtn]));
+      back.appendChild(card);
+      document.body.appendChild(back);
+      requestAnimationFrame(() => back.classList.add('show'));
+      function close(val) { document.removeEventListener('keydown', onKey); back.classList.remove('show'); setTimeout(() => back.remove(), 200); resolve(val); }
+      function onKey(e) { if (e.key === 'Enter') { e.preventDefault(); close(input ? field.value : true); } else if (e.key === 'Escape') { close(input ? null : false); } }
+      okBtn.addEventListener('click', () => close(input ? field.value : true));
+      cancelBtn.addEventListener('click', () => close(input ? null : false));
+      back.addEventListener('click', e => { if (e.target === back) close(input ? null : false); });
+      document.addEventListener('keydown', onKey);
+      if (field) { field.focus(); field.select(); } else okBtn.focus();
+    });
+  }
+  const modalAlert = (message, title = '') => modal({ title, message, showCancel: false });
+  const modalConfirm = (message, opts = {}) => modal(Object.assign({ message, okText: 'Ya', cancelText: 'Batal' }, opts));
+  const modalPrompt = (label, defaultValue = '') => modal({ title: label, input: true, defaultValue });
+
   function mkField(label, control) { return el('label', { class: 'field' }, [label, control]); }
   function mkInput(type, val, on, id, extra = {}) {
     const i = el('input', Object.assign({ type, value: val }, id ? { id } : {}, extra));

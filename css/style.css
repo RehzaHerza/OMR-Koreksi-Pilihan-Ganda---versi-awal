@@ -216,6 +216,22 @@ textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
 .chip-x { border: none; background: var(--line); color: var(--ink-soft); width: 20px; height: 20px; border-radius: 50%; cursor: pointer; font-size: 14px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; padding: 0; font-family: var(--sans); }
 .chip-x:hover { background: var(--accent); color: #fff; }
 
+/* Modal custom (pengganti dialog bawaan browser) */
+.modal-back { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 20px;
+  background: rgba(28,39,51,.55); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px);
+  opacity: 0; transition: opacity .2s ease; }
+.modal-back.show { opacity: 1; }
+.modal-card { background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); padding: 24px 24px 22px;
+  width: 100%; max-width: 420px; transform: translateY(12px) scale(.97); transition: transform .22s cubic-bezier(.2,.7,.3,1); }
+.modal-back.show .modal-card { transform: none; }
+.modal-title { font-size: 17px; font-weight: 700; color: var(--ink); }
+.modal-msg { font-size: 14.5px; color: var(--ink); line-height: 1.55; }
+.modal-title + .modal-msg { margin-top: 8px; color: var(--ink-soft); }
+.modal-input { margin-top: 14px; }
+.modal-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.btn.btn-danger { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 4px 14px -4px rgba(224,83,63,.5); }
+.btn.btn-danger:hover { background: #c5402e; border-color: #c5402e; }
+
 @media (max-width: 560px) {
   body { font-size: 15px; }
   /* --- header ringkas + menu bisa diciutkan (desktop tak berubah) --- */
