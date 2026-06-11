@@ -138,7 +138,7 @@ button.btn:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
 .btn-row { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 20px; }
 
 /* ---- Answer key grid ---- */
-.key-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(225px, 1fr)); gap: 11px; }
+.key-grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(220px, 340px); gap: 11px; overflow-x: auto; padding-bottom: 4px; }
 .key-item {
   display: grid; grid-template-columns: 34px 1fr 74px; gap: 10px; align-items: center;
   background: var(--surface-2); padding: 11px 12px; border-radius: var(--r); border: 1px solid var(--line);
@@ -301,4 +301,5 @@ textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
   main { padding: 18px 13px 90px; }
   .card { padding: 18px 16px; border-radius: var(--r); }
   .key-item { grid-template-columns: 30px 1fr 62px; }
+  .key-grid { grid-auto-flow: row !important; grid-template-rows: auto !important; grid-template-columns: 1fr !important; grid-auto-columns: auto; overflow-x: visible; }
 }

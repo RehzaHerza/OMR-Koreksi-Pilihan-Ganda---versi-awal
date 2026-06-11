@@ -296,6 +296,10 @@
         el('div', {}, [el('div', { class: 'lbl' }, 'Bobot'), wt])
       ]));
     });
+    // Tinggi kolom tetap: maks 20 soal per kolom (1-20 kolom 1, 21-40 kolom 2, dst).
+    const perCol = 20;
+    const rows = Math.max(1, Math.min(OMR.state.answerKey.length, perCol));
+    grid.style.gridTemplateRows = `repeat(${rows}, auto)`;
     card.appendChild(grid);
     card.appendChild(el('div', { class: 'btn-row' }, [
       el('button', { class: 'btn ghost', onclick: () => { OMR.state.answerKey.forEach(k => k.correct = letters[0]); OMR.save(); renderKey(); } }, 'Set semua jawaban → ' + letters[0]),
