@@ -52,6 +52,7 @@
     OMR.addProfile(name);
     currentScan = null;
     renderProfileBar(); switchTab(currentTab);
+    toast('Kelas "' + (OMR.activeProfile().name) + '" ditambahkan.', 'ok');
   }
   async function renameProfilePrompt() {
     const p = OMR.activeProfile();
@@ -59,14 +60,17 @@
     if (name === null) return;
     OMR.renameProfile(p.id, name);
     renderProfileBar();
+    toast('Nama kelas diperbarui.', 'ok');
   }
   async function deleteProfilePrompt() {
     const p = OMR.activeProfile();
     if (OMR.listProfiles().length <= 1) { await modalAlert('Tidak bisa menghapus satu-satunya kelas.'); return; }
     if (!(await modalConfirm(`Hapus kelas "${p.name}" beserta SEMUA data-nya (kunci, daftar nama & nilai)? Tindakan ini tidak bisa dibatalkan.`, { danger: true, okText: 'Hapus' }))) return;
+    const nm = p.name;
     OMR.deleteProfile(p.id);
     currentScan = null;
     renderProfileBar(); switchTab(currentTab);
+    toast('Kelas "' + nm + '" dihapus.', 'warn');
   }
 
   /* ---------------- Navigasi ---------------- */
@@ -214,7 +218,7 @@
       });
       card.appendChild(chips);
       card.appendChild(el('div', { class: 'btn-row' }, [
-        el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Kosongkan seluruh daftar nama kelas ini?', { danger: true, okText: 'Kosongkan' })) { OMR.state.roster = []; OMR.save(); renderRosterCard(); } } }, 'Kosongkan daftar nama')
+        el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Kosongkan seluruh daftar nama kelas ini?', { danger: true, okText: 'Kosongkan' })) { OMR.state.roster = []; OMR.save(); renderRosterCard(); toast('Daftar nama dikosongkan.', 'warn'); } } }, 'Kosongkan daftar nama')
       ]));
     } else {
       card.appendChild(el('div', { class: 'empty', style: 'padding:16px' }, 'Belum ada nama. Tempel atau impor daftar nama siswa kelas ini.'));
@@ -236,7 +240,7 @@
       const sel = el('select', { id: 'model-sel', style: 'width:auto;min-width:200px' }, models.map(m => { const o = el('option', { value: m.id }); o.textContent = m.name; return o; }));
       row.appendChild(sel);
       row.appendChild(el('button', { class: 'btn', onclick: () => { OMR.loadModel($('#model-sel').value); renderSetup(); toast('Model dimuat. Pengaturan & kunci diperbarui.', 'ok', '#view-setup'); } }, 'Muat'));
-      row.appendChild(el('button', { class: 'btn ghost', onclick: async () => { const m = models.find(x => x.id === $('#model-sel').value); if (m && await modalConfirm('Hapus model "' + m.name + '"?', { danger: true, okText: 'Hapus' })) { OMR.deleteModel(m.id); renderSetup(); } } }, 'Hapus'));
+      row.appendChild(el('button', { class: 'btn ghost', onclick: async () => { const m = models.find(x => x.id === $('#model-sel').value); if (m && await modalConfirm('Hapus model "' + m.name + '"?', { danger: true, okText: 'Hapus' })) { OMR.deleteModel(m.id); renderSetup(); toast('Model "' + m.name + '" dihapus.', 'warn'); } } }, 'Hapus'));
     } else {
       card.appendChild(el('div', { class: 'empty', style: 'padding:14px' }, 'Belum ada model tersimpan.'));
     }
@@ -566,7 +570,7 @@
           el('td', { html: `<span class="stat salah">${salah}</span>` }),
           el('td', {}, `${s.score} / ${s.maxScore}`),
           el('td', { html: `<span class="pill">${s.percent}</span>` }),
-          el('td', {}, el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Hapus ' + s.name + '?', { danger: true, okText: 'Hapus' })) { OMR.state.students.splice(i, 1); OMR.save(); renderResults(); } } }, 'Hapus'))
+          el('td', {}, el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Hapus ' + s.name + '?', { danger: true, okText: 'Hapus' })) { OMR.state.students.splice(i, 1); OMR.save(); renderResults(); toast('Siswa dihapus.', 'warn'); } } }, 'Hapus'))
         ]);
       });
       const table = el('table', { class: 'rekap' }, [
@@ -580,6 +584,7 @@
   async function clearStudents() {
     if (!(await modalConfirm('Kosongkan seluruh daftar nilai? (kunci & pengaturan tetap)', { danger: true, okText: 'Kosongkan' }))) return;
     OMR.state.students = []; OMR.save(); renderResults();
+    toast('Daftar nilai dikosongkan.', 'warn');
   }
 
   /* ---------------- Helpers ---------------- */
@@ -626,11 +631,22 @@
   function optEl(text, value) { const o = el('option', { value }); o.textContent = text; return o; }
   function clamp(n, a, b) { return Math.max(a, Math.min(b, n || a)); }
   function notice(text, type) { return el('div', { class: 'notice ' + type }, text); }
-  function toast(text, type, anchor) {
-    const n = notice(text, type);
-    const host = $(anchor) || document.body;
-    host.insertBefore(n, host.firstChild);
-    setTimeout(() => n.remove(), 3500);
+  /* Notifikasi popup melayang (selalu terlihat walau halaman di-scroll).
+     Param 'anchor' lama diabaikan — semua toast kini tampil di posisi tetap. */
+  function toast(text, type /*, anchor */) {
+    type = type || 'ok';
+    let host = document.getElementById('toast-host');
+    if (!host) { host = el('div', { id: 'toast-host' }); document.body.appendChild(host); }
+    const icons = { ok: '✓', warn: '!', err: '✕', info: 'i' };
+    const t = el('div', { class: 'toast toast-' + type });
+    t.appendChild(el('span', { class: 'toast-ic' }, icons[type] || icons.info));
+    t.appendChild(el('span', { class: 'toast-tx' }, text));
+    host.appendChild(t);
+    requestAnimationFrame(() => t.classList.add('show'));
+    let done = false;
+    const close = () => { if (done) return; done = true; t.classList.remove('show'); t.classList.add('hide'); setTimeout(() => t.remove(), 280); };
+    const timer = setTimeout(close, type === 'err' ? 4200 : 2800);
+    t.addEventListener('click', () => { clearTimeout(timer); close(); });
   }
   function download(href, name) { const a = el('a', { href, download: name }); document.body.appendChild(a); a.click(); a.remove(); }
 

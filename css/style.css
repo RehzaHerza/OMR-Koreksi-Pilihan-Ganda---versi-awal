@@ -232,6 +232,23 @@ textarea { resize: vertical; min-height: 84px; line-height: 1.5; }
 .btn.btn-danger { background: var(--red); border-color: var(--red); color: #fff; box-shadow: 0 4px 14px -4px rgba(224,83,63,.5); }
 .btn.btn-danger:hover { background: #c5402e; border-color: #c5402e; }
 
+/* Notifikasi popup melayang */
+#toast-host { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 1200;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; pointer-events: none; width: max-content; max-width: 92vw; }
+.toast { pointer-events: auto; display: flex; align-items: center; gap: 11px; min-width: 250px; max-width: 92vw;
+  padding: 13px 18px 13px 14px; border-radius: 14px; font-size: 14px; line-height: 1.4; color: #fff; cursor: pointer;
+  background: var(--ink); box-shadow: 0 12px 32px -8px rgba(20,30,40,.5);
+  opacity: 0; transform: translateY(16px) scale(.96); transition: opacity .28s ease, transform .28s cubic-bezier(.2,.8,.3,1); }
+.toast.show { opacity: 1; transform: none; }
+.toast.hide { opacity: 0; transform: translateY(10px) scale(.97); }
+.toast-ic { flex: 0 0 22px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; line-height: 1; }
+.toast-tx { flex: 1; font-weight: 500; }
+.toast-ok   { background: #143329; } .toast-ok   .toast-ic { background: var(--green); color: #fff; }
+.toast-warn { background: #3a2c0e; } .toast-warn .toast-ic { background: var(--amber); color: #3a2c0e; }
+.toast-err  { background: #3a1812; } .toast-err  .toast-ic { background: var(--red); color: #fff; }
+.toast-info { background: var(--brand-2); } .toast-info .toast-ic { background: #fff; color: var(--brand); }
+@media (max-width: 560px) { #toast-host { bottom: 16px; left: 12px; right: 12px; transform: none; width: auto; } .toast { width: 100%; } }
+
 @media (max-width: 560px) {
   body { font-size: 15px; }
   /* --- header ringkas + menu bisa diciutkan (desktop tak berubah) --- */
