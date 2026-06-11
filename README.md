@@ -2,7 +2,7 @@
 
 Aplikasi web untuk mengoreksi lembar jawaban pilihan ganda pakai kamera. Siswa menyilang jawaban pakai ballpoint, lembarnya difoto, dan aplikasi yang menghitung nilainya.
 
-Semuanya jalan di dalam browser. Tidak ada server, tidak ada database, tidak butuh internet setelah halaman kebuka, dan tidak ada AI yang menebak-nebak jawaban. Datanya disimpan di browser kamu sendiri. Jadi gratis, cepat, dan privat. Paling enak ditaruh di GitHub Pages.
+Semuanya jalan di dalam browser. Tidak ada server yang memproses jawaban, tidak ada database, dan tidak ada AI yang menebak-nebak. Untuk membuka halamannya kamu tetap butuh internet — filenya diunduh dari tempat hosting. Tapi begitu halaman termuat, semua perhitungan terjadi di browsermu sendiri dan datanya tidak dikirim ke mana-mana. Jadi gratis, cepat, dan datamu privat. Paling enak ditaruh di GitHub Pages.
 
 ## Idenya
 
