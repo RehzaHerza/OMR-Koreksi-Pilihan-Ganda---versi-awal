@@ -51,53 +51,54 @@ const OMRCV = (function () {
     return 255;
   }
 
-  /* Komponen gelap terbesar dalam jendela -> centroid (koordinat full proc).
+  /* Cari MARKER (kotak hitam padat) dalam jendela pojok.
+     Dulu: ambil blob gelap TERBESAR -> sering salah pilih meja/tepi kertas
+     yang lebih besar dari marker. Sekarang: kumpulkan semua blob gelap, lalu
+     pilih yang paling mirip kotak marker (lolos markerLike, fill paling padat).
      thr = ambang gelap utk marker (lebih ketat, marker = hitam pekat). */
-  function largestDarkCentroid(gray, w, h, x0, y0, x1, y1, thr) {
+  function markerInWindow(gray, w, h, x0, y0, x1, y1, thr) {
     x0 = Math.max(0, x0 | 0); y0 = Math.max(0, y0 | 0);
     x1 = Math.min(w, x1 | 0); y1 = Math.min(h, y1 | 0);
     const ww = x1 - x0, hh = y1 - y0;
     if (ww <= 0 || hh <= 0) return null;
 
+    const minCnt = ww * hh * 0.0025;   // blob minimum (longgar utk foto kurang terang)
     const visited = new Uint8Array(ww * hh);
-    const isDark = (gx, gy) => gray[gy * w + gx] < thr;
-
-    let best = null;
     const stack = new Int32Array(ww * hh * 2);
+    let best = null, bestFill = -1;
 
     for (let ly = 0; ly < hh; ly++) {
       for (let lx = 0; lx < ww; lx++) {
         const li = ly * ww + lx;
         if (visited[li]) continue;
-        const gx = x0 + lx, gy = y0 + ly;
-        if (!isDark(gx, gy)) { visited[li] = 1; continue; }
-        // BFS/DFS flood fill (lacak bbox utk validasi bentuk)
+        if (gray[(y0 + ly) * w + (x0 + lx)] >= thr) { visited[li] = 1; continue; }
+        // flood fill satu komponen
         let sp = 0, sumX = 0, sumY = 0, cnt = 0;
         let mnx = lx, mxx = lx, mny = ly, mxy = ly;
-        stack[sp++] = lx; stack[sp++] = ly;
-        visited[li] = 1;
+        stack[sp++] = lx; stack[sp++] = ly; visited[li] = 1;
         while (sp > 0) {
           const cy = stack[--sp], cx = stack[--sp];
-          const cgx = x0 + cx, cgy = y0 + cy;
-          sumX += cgx; sumY += cgy; cnt++;
+          sumX += x0 + cx; sumY += y0 + cy; cnt++;
           if (cx < mnx) mnx = cx; if (cx > mxx) mxx = cx;
           if (cy < mny) mny = cy; if (cy > mxy) mxy = cy;
-          // tetangga 4-arah
           const nb = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
           for (const [nx, ny] of nb) {
             if (nx < 0 || ny < 0 || nx >= ww || ny >= hh) continue;
             const ni = ny * ww + nx;
             if (visited[ni]) continue;
             visited[ni] = 1;
-            if (isDark(x0 + nx, y0 + ny)) { stack[sp++] = nx; stack[sp++] = ny; }
+            if (gray[(y0 + ny) * w + (x0 + nx)] < thr) { stack[sp++] = nx; stack[sp++] = ny; }
           }
         }
-        if (!best || cnt > best.cnt) best = { cnt, cx: sumX / cnt, cy: sumY / cnt, bw: mxx - mnx + 1, bh: mxy - mny + 1 };
+        if (cnt < minCnt) continue;
+        const bw = mxx - mnx + 1, bh = mxy - mny + 1;
+        const blob = { x: sumX / cnt, y: sumY / cnt, area: cnt, bw, bh };
+        if (!markerLike(blob, ww, hh)) continue;   // hanya yg mirip kotak marker
+        const fill = cnt / (bw * bh);              // marker = kotak padat -> fill tinggi
+        if (fill > bestFill) { bestFill = fill; best = blob; }
       }
     }
-    // tolak blob terlalu kecil (noise)
-    if (!best || best.cnt < (ww * hh) * 0.004) return null;
-    return { x: best.cx, y: best.cy, area: best.cnt, bw: best.bw, bh: best.bh };
+    return best;
   }
 
   /* Validasi: gumpalan ini benar-benar mirip MARKER (kotak hitam padat)?
@@ -105,10 +106,10 @@ const OMRCV = (function () {
   function markerLike(b, winW, winH) {
     if (!b) return false;
     const aspect = b.bw / b.bh;
-    if (aspect < 0.55 || aspect > 1.8) return false;            // harus ~persegi
+    if (aspect < 0.5 || aspect > 2.0) return false;             // ~persegi (toleransi crop tipis)
     const fill = b.area / (b.bw * b.bh);
-    if (fill < 0.55) return false;                              // padat (bukan rambut/acak)
-    const minS = Math.min(winW, winH) * 0.03;
+    if (fill < 0.5) return false;                               // padat (bukan rambut/acak)
+    const minS = Math.min(winW, winH) * 0.025;
     if (b.bw < minS || b.bh < minS) return false;               // jangan terlalu kecil
     if (b.bw > winW * 0.6 || b.bh > winH * 0.6) return false;    // jangan sebesar jendela
     return true;
@@ -117,19 +118,17 @@ const OMRCV = (function () {
   /* Deteksi 4 marker pojok. Mengembalikan {tl,tr,bl,br} atau null. */
   function detectFiducials(gray, w, h, fidThr) {
     const wx = w * FID_WIN_X, wy = h * FID_WIN_Y;
-    const tl = largestDarkCentroid(gray, w, h, 0, 0, wx, wy, fidThr);
-    const tr = largestDarkCentroid(gray, w, h, w - wx, 0, w, wy, fidThr);
-    const bl = largestDarkCentroid(gray, w, h, 0, h - wy, wx, h, fidThr);
-    const br = largestDarkCentroid(gray, w, h, w - wx, h - wy, w, h, fidThr);
+    const tl = markerInWindow(gray, w, h, 0, 0, wx, wy, fidThr);
+    const tr = markerInWindow(gray, w, h, w - wx, 0, w, wy, fidThr);
+    const bl = markerInWindow(gray, w, h, 0, h - wy, wx, h, fidThr);
+    const br = markerInWindow(gray, w, h, w - wx, h - wy, w, h, fidThr);
     if (!tl || !tr || !bl || !br) return null;
+    // (markerLike sudah dipastikan di dalam markerInWindow)
 
-    // 1) tiap gumpalan harus benar-benar mirip marker (kotak padat), bukan rambut/layar
-    if (![tl, tr, bl, br].every(b => markerLike(b, wx, wy))) return null;
-
-    // 2) susunan 4 titik harus masuk akal sbg lembar (tdk acak)
+    // susunan 4 titik harus masuk akal sbg lembar (tdk acak)
     if (!(tl.x < tr.x && bl.x < br.x && tl.y < bl.y && tr.y < br.y)) return null;
 
-    // 3) ke-4 marker harus mencakup area yang cukup luas (lembar mengisi frame)
+    // ke-4 marker harus mencakup area yang cukup luas (lembar mengisi frame)
     const spanTop = tr.x - tl.x, spanLeft = bl.y - tl.y;
     if (spanTop < w * 0.30 || spanLeft < h * 0.22) return null;
 
