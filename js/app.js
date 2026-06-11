@@ -469,10 +469,12 @@
     }
     currentScan = { answers: res.answers.slice(), name: '', kelas: OMR.activeProfile().name };
     const dbg = el('canvas');
-    OMRCV.drawDebug(dbg, res);
+    currentScan.res = res;
+    currentScan.dbg = dbg;
+    drawResultOverlay();
 
     box.appendChild(el('h3', { class: 'section' }, 'Verifikasi pembacaan'));
-    box.appendChild(notice('Periksa overlay: lingkaran merah = marker, kotak biru = titik baca. Soal bertanda kuning perlu Anda pastikan (kosong/ganda).', 'warn'));
+    box.appendChild(notice('Lingkaran merah = marker. Kotak HIJAU = jawaban benar (kunci), MERAH = pilihan siswa yang salah, biru = titik baca. Soal kuning perlu Anda pastikan (kosong/ganda).', 'warn'));
     box.appendChild(el('div', { class: 'canvas-wrap' }, dbg));
     box.appendChild(nameField());
     box.appendChild(el('h3', { class: 'section' }, 'Jawaban terbaca (bisa dikoreksi)'));
@@ -493,16 +495,29 @@
     if (liveMode) { const n = $('#st-name'); if (n) n.focus(); }
   }
 
+  function drawResultOverlay() {
+    if (!currentScan || !currentScan.dbg || !currentScan.res) return;
+    OMRCV.drawDebug(currentScan.dbg, currentScan.res, {
+      answers: currentScan.answers,
+      key: OMR.state.answerKey.map(k => k && k.correct),
+      letters: OMR.optionLetters(OMR.cfg.numOptions)
+    });
+  }
+
   function renderReview() {
     const letters = OMR.optionLetters(OMR.cfg.numOptions);
     const rv = $('#review'); rv.innerHTML = '';
     const grid = el('div', { class: 'review-grid' });
     currentScan.answers.forEach((ans, q) => {
       const flag = (ans === '?' || ans === '-');
+      const correct = (OMR.state.answerKey[q] || {}).correct;
       const opts = el('div', { class: 'opt-btns' });
       [...letters, '–'].forEach(L => {
         const val = L === '–' ? '-' : L;
-        const b = el('button', { class: (ans === val ? 'sel ' : '') + (L === '–' ? 'blank' : ''), onclick: () => { currentScan.answers[q] = val; renderReview(); } }, L);
+        let cls = (ans === val ? 'sel ' : '') + (L === '–' ? 'blank ' : '');
+        if (correct && val === correct) cls += 'correct ';
+        else if (val === ans && ans !== correct && val !== '-') cls += 'wrong ';
+        const b = el('button', { class: cls.trim(), onclick: () => { currentScan.answers[q] = val; renderReview(); } }, L);
         opts.appendChild(b);
       });
       grid.appendChild(el('div', { class: 'rev-q' + (flag ? ' flag' : '') }, [
@@ -510,6 +525,7 @@
       ]));
     });
     rv.appendChild(grid);
+    drawResultOverlay();   // overlay gambar ikut warna terbaru setelah koreksi
     renderScorePreview();
   }
   function renderScorePreview() {

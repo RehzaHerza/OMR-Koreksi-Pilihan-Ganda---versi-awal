@@ -257,8 +257,10 @@ const OMRCV = (function () {
     };
   }
 
-  /* Gambar overlay debug ke canvas tujuan (utk verifikasi visual) */
-  function drawDebug(targetCanvas, result) {
+  /* Gambar overlay ke canvas tujuan (verifikasi visual).
+     review (opsional) = { answers:[huruf/soal], key:[huruf benar/soal], letters:[A..] }
+     -> kotak HIJAU = jawaban benar menurut kunci, MERAH = pilihan siswa yg salah. */
+  function drawDebug(targetCanvas, result, review) {
     const { procCanvas, debug } = result;
     targetCanvas.width = procCanvas.width;
     targetCanvas.height = procCanvas.height;
@@ -270,9 +272,24 @@ const OMRCV = (function () {
     Object.values(debug.fids).forEach(f => {
       ctx.beginPath(); ctx.arc(f.x, f.y, 8, 0, 7); ctx.stroke();
     });
-    // titik sampling
-    ctx.strokeStyle = 'rgba(40,120,220,0.85)'; ctx.lineWidth = 1;
-    debug.samplePts.forEach(s => ctx.strokeRect(s.px - s.bw / 2, s.py - s.bh / 2, s.bw, s.bh));
+    // titik sampling tiap opsi
+    const r = review || null;
+    debug.samplePts.forEach(s => {
+      let stroke = 'rgba(40,120,220,0.55)', lw = 1, fill = null;
+      if (r && r.letters) {
+        const L = r.letters[s.o];
+        const correct = r.key ? r.key[s.q] : '';
+        const chosen = r.answers ? r.answers[s.q] : '';
+        if (correct && L === correct) {            // kunci benar -> hijau
+          stroke = '#1f9d6b'; lw = 3; fill = 'rgba(31,157,107,0.22)';
+        } else if (chosen && L === chosen && chosen !== correct) { // pilihan salah -> merah
+          stroke = '#e0533f'; lw = 3; fill = 'rgba(224,83,63,0.22)';
+        }
+      }
+      const x = s.px - s.bw / 2, y = s.py - s.bh / 2;
+      if (fill) { ctx.fillStyle = fill; ctx.fillRect(x, y, s.bw, s.bh); }
+      ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.strokeRect(x, y, s.bw, s.bh);
+    });
   }
 
   return { process, drawDebug };

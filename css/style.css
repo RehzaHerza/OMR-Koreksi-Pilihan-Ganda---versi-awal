@@ -183,6 +183,8 @@ video { width: 100%; max-width: 560px; border-radius: var(--r); background: #000
 .opt-btns button:active { transform: scale(.92); }
 .opt-btns button.sel { background: var(--accent); color: #fff; border-color: var(--accent); box-shadow: 0 3px 10px -3px rgba(240,98,62,.55); }
 .opt-btns button.blank { color: var(--muted); }
+.opt-btns button.correct { background: var(--green); color: #fff; border-color: var(--green); box-shadow: 0 3px 10px -3px rgba(31,157,107,.55); }
+.opt-btns button.wrong { background: var(--red); color: #fff; border-color: var(--red); box-shadow: 0 3px 10px -3px rgba(224,83,63,.55); }
 .stat { display: inline-block; font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
 .stat.benar { background: var(--green-soft); color: #127049; }
 .stat.salah, .stat.kosong, .stat.ganda { background: var(--red-soft); color: #b53a26; }
