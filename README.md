@@ -1,125 +1,78 @@
-# Koreksi Pilihan Ganda — Scan Kamera (Silang Ballpoint)
+# Koreksi Pilihan Ganda
 
-Web app *native* (HTML/CSS/JS, tanpa framework, tanpa server) untuk mengoreksi
-lembar jawaban pilihan ganda yang **disilang (X) pakai ballpoint**, lewat
-**foto kamera atau unggah gambar**. Berjalan penuh di browser, data tersimpan
-lokal (offline). Cocok di-hosting di **GitHub Pages**.
+Aplikasi web untuk mengoreksi lembar jawaban pilihan ganda pakai kamera. Siswa menyilang jawaban pakai ballpoint, lembarnya difoto, dan aplikasi yang menghitung nilainya.
 
-## Alur pakai
+Semuanya jalan di dalam browser. Tidak ada server, tidak ada database, tidak butuh internet setelah halaman kebuka, dan tidak ada AI yang menebak-nebak jawaban. Datanya disimpan di browser kamu sendiri. Jadi gratis, cepat, dan privat. Paling enak ditaruh di GitHub Pages.
 
-1. **Pengaturan** — judul ujian, jumlah soal, jumlah opsi (A–E), kolom, bobot.
-2. **Kunci Jawaban** — set jawaban benar tiap soal. Kolom *Setengah* opsional:
-   bila diisi, opsi itu bernilai **separuh bobot**. Bobot bisa beda per soal.
-3. **Lembar Jawaban** — cetak / unduh lembar. Lembar punya **4 kotak hitam di
-   sudut** sebagai acuan kamera. Siswa menyilang opsi dengan ballpoint.
-4. **Scan & Koreksi** — foto lembar (kamera/unggah). App mendeteksi marker,
-   meluruskan perspektif, lalu membaca tiap kotak. Hasil ditampilkan dengan
-   overlay + **bisa dikoreksi manual** (soal kosong/ganda ditandai kuning).
-   Isi nama siswa → **Simpan ke Daftar Nilai**.
-5. **Rekap Nilai** — tabel nilai semua siswa + **unduh Excel / Word / PDF**.
+## Idenya
 
-## Cara kerja koreksi (ringkas)
+Supaya kamera bisa membaca lembar dengan tepat, lembarnya harus dicetak dari aplikasi ini sendiri. Tiap lembar punya empat kotak hitam di sudut. Empat kotak itulah yang dipakai kamera untuk mengenali posisi lembar dan meluruskan foto, walau fotonya agak miring. Karena itu lembar polos bawaan sekolah (yang tanpa kotak sudut) tidak bisa dipakai — harus lembar yang dicetak dari sini.
 
-- Lembar dibuat oleh app sendiri, jadi geometri kotak diketahui pasti.
-- Saat foto: deteksi 4 marker sudut → hitung *homography* (koreksi perspektif)
-  → petakan tiap kotak ke foto → hitung rasio piksel gelap → opsi paling gelap
-  = jawaban. Kosong & ganda dideteksi dan ditandai untuk diperiksa.
-- Penilaian: **benar** (poin penuh), **setengah** (opsi alternatif di kunci),
-  **salah/kosong/ganda** (0).
+Satu hal yang sering disalahpahami: aplikasi ini **tidak membaca tulisan tangan**. Kolom nama, kelas, dan nomor di lembar itu cuma garis kosong untuk diisi siswa, supaya kamu tahu ini lembar siapa. Yang dibaca aplikasi hanya kotak pilihan yang disilang.
 
-## Edit di VSCode
+## Cara pakai
+
+Urutannya ikuti tab dari kiri ke kanan:
+
+1. **Pengaturan** — atur judul ujian, jumlah soal, jumlah pilihan (A–E), berapa kolom di lembar, dan bobot tiap soal. Di bagian bawah halaman ini kamu juga bisa memasukkan daftar nama siswa: tinggal tempel dari Excel atau unggah file. Kalau belum punya formatnya, ada tombol unduh template.
+2. **Kunci Jawaban** — isi jawaban benar untuk tiap nomor. Bobot bisa dibuat beda per soal kalau memang perlu.
+3. **Lembar Jawaban** — cetak atau unduh lembarnya, lalu bagikan ke siswa. Mereka mengisi dengan cara menyilang pilihan pakai ballpoint.
+4. **Scan & Koreksi** — foto lembar yang sudah diisi, atau pakai Mode Live (kamera dibiarkan menyala; begitu lembar terdeteksi dan diam sebentar, langsung dibaca otomatis). Hasil bacanya muncul lengkap dengan tanda di atas foto, dan bisa kamu betulkan kalau ada yang keliru. Pilih nama siswa dari daftar, lalu simpan.
+5. **Rekap Nilai** — semua nilai terkumpul di sini, dan bisa diunduh jadi Excel, Word, atau PDF.
+
+## Cara membaca silangnya
+
+Singkatnya begini: aplikasi mencari empat kotak hitam di sudut, meluruskan foto berdasarkan posisi keempatnya, lalu melihat tiap kotak pilihan dan mengukur seberapa gelap. Kotak yang jelas lebih gelap dibanding kotak-kotak kosong di sebelahnya dianggap jawaban siswa.
+
+Karena yang diukur cuma "seberapa gelap", bentuk coretannya tidak jadi soal — mau silang penuh, silang kecil, atau dilingkari, sama saja, asal cukup jelas. Yang dibandingkan adalah kotak terisi melawan kotak kosong di baris yang sama, jadi lembar yang agak kotor pun tidak gampang salah baca. Soal yang kosong atau disilang dua otomatis ditandai supaya kamu periksa sendiri.
+
+Jujur saja: seberapa "jelas" sebuah coretan supaya dianggap sah itu masih perlu disesuaikan dengan gaya menulis siswamu yang sebenarnya. Angka penyetelnya ada di `js/scanner.js` (sudah diberi nama dan komentar). Itu sebabnya selalu ada langkah koreksi manual sebelum menyimpan — anggap itu jaring pengaman, bukan tanda aplikasinya kurang bagus.
+
+## Kelas
+
+Di bagian atas ada pilihan Kelas. Tiap kelas punya kunci jawaban, daftar nama, dan daftar nilai sendiri yang terpisah penuh. Ganti kelas lewat dropdown, datanya ikut berganti. Karena kamu mengajar beberapa mapel, paling praktis namai tiap kelas dengan kelas + mapel, misalnya "X TKR — RPL".
+
+Perlu diingat datanya tersimpan per browser di satu perangkat, bukan akun online. Kalau dibuka di HP atau komputer lain, mulai dari kosong. Jadi anggap file Excel hasil unduhan sebagai arsip nilai yang sesungguhnya, dan rajin-rajin ekspor.
+
+## Layar pembuka
+
+Waktu dibuka, ada layar pembuka berisi logo dan nama sekolah dengan foto sekolah sebagai latar. Gambarnya ada di folder `assets/` — `logo-sekolah.png` dan `sekolah-bg.jpg`. Mau ganti? Tinggal timpa kedua file itu dengan nama yang sama. Nama sekolah diubah di `index.html`, dan lama tampilnya diatur di `js/app.js` (cari `SPLASH_MIN_MS`).
+
+## Menjalankan di komputer sendiri
+
+Kamera hanya jalan di `localhost` atau `https`, jadi tidak bisa cuma klik dua kali file html-nya. Jalankan server statis dulu:
+
+```bash
+python3 -m http.server 8000
+```
+
+lalu buka `http://localhost:8000`. Atau lebih gampang, pakai ekstensi "Live Server" di VSCode.
+
+## Menaruh online (GitHub Pages)
+
+Cara paling mudah lewat GitHub Pages: buat repo, push semua isi folder ini (termasuk `lib/` dan `assets/`), lalu masuk Settings → Pages dan pilih branch `main`. Nanti dapat alamat `https://namauser.github.io/namarepo/`. Pastikan alamatnya `https`, karena kamera tidak akan jalan kalau cuma `http`.
+
+Mau pindah ke hosting lain juga bisa, prinsipnya sama: ini cuma kumpulan file statis, tinggal diunggah. Yang wajib cuma satu — host-nya harus mengaktifkan https.
+
+## Isi folder
 
 ```
 omr/
-├── index.html              # shell + urutan <script>
-├── css/style.css           # tema & layout
+├── index.html              halaman utama
+├── css/style.css           tampilan
 ├── js/
-│   ├── config.js           # state, storage, GEOMETRI bersama (paling inti)
-│   ├── scanner.js          # computer vision (deteksi marker, homography, baca silang)
-│   ├── scoring.js          # benar / setengah / salah
-│   ├── sheet-generator.js  # buat lembar jawaban printable
-│   ├── export.js           # ekspor Excel / DOCX / PDF
-│   └── app.js              # controller UI
-└── lib/                    # library export (LOKAL, bukan CDN)
-    ├── xlsx.full.min.js        (SheetJS)
-    ├── jspdf.umd.min.js
-    ├── jspdf.plugin.autotable.min.js
-    └── docx.iife.js
+│   ├── config.js           pengaturan, penyimpanan, dan geometri lembar (paling inti)
+│   ├── scanner.js          pembacaan kamera (deteksi sudut, luruskan, baca silang)
+│   ├── scoring.js          hitung benar/salah
+│   ├── sheet-generator.js  pembuat lembar jawaban
+│   ├── export.js           ekspor Excel/Word/PDF
+│   └── app.js              pengatur tampilan
+├── lib/                    library ekspor (disimpan lokal, bukan dari internet)
+└── assets/                 logo & foto sekolah untuk layar pembuka
 ```
 
-Buka folder di VSCode. Untuk uji lokal, jalankan server statis (kamera butuh
-`https://` atau `localhost`):
+## Yang perlu diingat
 
-```bash
-# pilih salah satu
-python3 -m http.server 8000
-# atau ekstensi "Live Server" di VSCode
-```
-
-Lalu buka `http://localhost:8000`.
-
-## Hosting di GitHub Pages
-
-1. Buat repo, push seluruh isi folder ini (termasuk `lib/`).
-2. Settings → Pages → Source: `Deploy from a branch` → branch `main`, folder `/root`.
-3. Akses di `https://<user>.github.io/<repo>/`. Kamera aktif karena Pages `https`.
-
-## Catatan penting (jujur, baca ini)
-
-- **Akurasi pembacaan bergantung kualitas foto.** Ambil tegak lurus, semua
-  sudut & lembar masuk frame, cahaya rata, tanpa bayangan/silau. Marker hitam
-  di 4 sudut **wajib** ikut terfoto.
-- Pipeline ini sudah diuji secara sintetis (20/20 benar). Pada foto nyata,
-  ambang deteksi (`MIN_FILL`, `DOMINANCE` di `scanner.js`; `inkThr` faktor)
-  mungkin perlu **dikalibrasi** sekali. Itu sebabnya ada **koreksi manual** —
-  itu jaring pengaman, bukan kekurangan. Periksa beberapa lembar pertama.
-- Jika "Marker tidak terdeteksi": kontras kurang / sudut terpotong / foto buram.
-- Data tersimpan di `localStorage` browser ini saja. Hapus cache = hilang.
-  Ekspor rutin ke Excel sebagai cadangan.
-
-## Profil guru (beberapa guru, satu perangkat)
-
-Di header ada **Profil guru**. Tiap profil punya pengaturan, kunci jawaban,
-dan daftar nilai sendiri yang terpisah penuh. Berguna kalau beberapa guru
-memakai komputer/browser yang sama.
-
-- Ganti profil lewat dropdown — data ikut berganti.
-- **+ Tambah** untuk guru baru, **Ubah nama**, **Hapus** (menghapus seluruh
-  data profil itu; minimal satu profil harus tetap ada).
-- Catatan: ini tetap **per-perangkat**. Kalau tiap guru pakai HP/laptop
-  sendiri, datanya memang sudah otomatis terpisah tanpa perlu profil. Profil
-  hanya memisahkan beberapa guru pada browser yang SAMA. Bukan akun terpusat,
-  data tidak tersinkron antar perangkat.
-- Data versi lama (sebelum fitur profil) otomatis dipindah ke profil pertama.
-
-## Batas versi ini
-
-Penyimpanan lokal per-perangkat (bukan server/cloud, tanpa login). Koreksi
-esai dilakukan manual di luar app.
-
-## Format resmi & Model lembar (baru)
-
-Lembar yang dihasilkan kini berformat resmi: kop judul yang bisa diatur,
-identitas (Mata Pelajaran/Hari-Tanggal/Waktu/No. Peserta/Nama/Kelas), tabel
-"A. PILIHAN GANDA" bergaris dua kolom, opsi halaman "B. ESSAY/URAIAN"
-(hanya dicetak, tidak discan), dan kotak Nilai/Paraf. **Empat marker hitam
-tetap ada** di sudut area pilihan ganda (halaman 1) — itu yang membuat scan
-bekerja, jadi halaman 1 wajib tercetak utuh & difoto lengkap.
-
-Di tab Pengaturan ada **Model Lembar**: simpan kombinasi pengaturan + kunci
-sebagai model bernama (mis. tiap tahun/mapel beda), lalu muat sebelum mencetak
-& scan. Penting: lembar tetap **dicetak dari app ini** (yang memuat marker);
-app tidak membaca lembar dari luar yang tanpa marker.
-
-## Mode Live (scan otomatis)
-
-Di tab Scan & Koreksi ada **Mulai Mode Live**: arahkan lembar ke kamera
-(ideal: webcam autofokus di tripod menghadap bawah, atau HP di dudukan).
-Saat ke-4 marker terdeteksi dan posisi stabil beberapa saat, app otomatis
-mengunci, membaca, dan menampilkan nilai — tinggal ketik nama siswa lalu
-"Simpan & Scan Berikutnya" untuk lembar berikutnya. Tetap ada tombol
-"Ambil Satu Foto" (manual) dan "Unggah Foto".
-
-Catatan: kecepatan baca otomatis, tapi nama siswa tetap diketik manual tiap
-lembar (nama di lembar adalah tulisan tangan, tidak dibaca app). Akurasi tetap
-bergantung kualitas gambar; koreksi manual hasil baca selalu tersedia.
+- Hasil baca tergantung kualitas foto. Ambil lurus dari atas, keempat sudut masuk frame, cahaya rata, hindari bayangan dan pantulan. Empat kotak hitam di sudut wajib ikut terfoto.
+- Datanya cuma ada di browser ini. Membersihkan cache browser berarti menghapus datanya. Ekspor ke Excel secara rutin untuk berjaga-jaga.
+- Aplikasi ini khusus pilihan ganda. Soal esai tetap dikoreksi manual.
