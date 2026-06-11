@@ -87,39 +87,57 @@
   function renderSetup() {
     const c = OMR.cfg;
     $('#view-setup').innerHTML = '';
+
+    const sgIcon = {
+      exam: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',
+      sheet: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>',
+      essay: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5Z"/></svg>'
+    };
+    const settingGroup = (icon, title, sub, children) => el('div', { class: 'setting-group' }, [
+      el('div', { class: 'sg-head' }, [
+        el('div', { class: 'sg-ic', html: icon }),
+        el('div', {}, [el('div', { class: 'sg-title' }, title), el('div', { class: 'sg-sub' }, sub)])
+      ]),
+      ...children
+    ]);
+
     const card = el('div', { class: 'card' }, [
       el('h2', {}, 'Pengaturan Ujian'),
       el('p', { class: 'sub' }, 'Atur dulu sebelum membuat kunci & lembar jawaban. Mengubah jumlah soal akan menyesuaikan kunci jawaban.')
     ]);
-    const form = el('div', { class: 'grid-form' }, [
-      mkField('Judul ujian (internal)', mkInput('text', c.examTitle, v => c.examTitle = v, 'cfg-title')),
-      mkField('Jumlah soal', mkInput('number', c.numQuestions, v => c.numQuestions = clamp(+v, 1, 100), 'cfg-q', { min: 1, max: 100 })),
-      mkField('Jumlah opsi (A–…)', mkSelect([3, 4, 5, 6], c.numOptions, v => c.numOptions = +v, 'cfg-o')),
-      mkField('Kolom di lembar', mkSelect([1, 2, 3], c.columns, v => c.columns = +v, 'cfg-col')),
-      mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(1, Math.round(+v) || 1), 'cfg-w', { min: 1, step: 1 })),
-      mkField('KKM (batas tuntas, 0–100)', mkInput('number', c.kkm ?? 70, v => c.kkm = clamp(Math.round(+v), 0, 100), 'cfg-kkm', { min: 0, max: 100, step: 1 }))
-    ]);
-    card.appendChild(form);
 
-    // --- Header lembar resmi ---
-    card.appendChild(el('h3', { class: 'section' }, 'Header Lembar (untuk cetak)'));
-    const ta = el('textarea', { id: 'cfg-titlelines', rows: '3', style: 'width:100%;font-family:var(--sans);font-size:14px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;resize:vertical' });
-    ta.value = c.titleLines || '';
-    ta.addEventListener('input', e => c.titleLines = e.target.value);
-    card.appendChild(el('label', { class: 'field' }, ['Judul kop (tiap baris = 1 baris di lembar)', ta]));
-    card.appendChild(el('div', { class: 'grid-form', style: 'margin-top:12px' }, [
-      mkField('Mata Pelajaran (kosong = garis isian)', mkInput('text', c.mapel || '', v => c.mapel = v, 'cfg-mapel')),
-      mkField('Hari/Tanggal (opsional)', mkInput('text', c.hariTanggal || '', v => c.hariTanggal = v, 'cfg-hari')),
-      mkField('Waktu (opsional)', mkInput('text', c.waktu || '', v => c.waktu = v, 'cfg-waktu'))
+    // Segmen: Dasar Ujian
+    card.appendChild(settingGroup(sgIcon.exam, 'Dasar Ujian', 'Jumlah soal, opsi jawaban, bobot, dan batas tuntas (KKM).', [
+      el('div', { class: 'grid-form' }, [
+        mkField('Judul ujian (internal)', mkInput('text', c.examTitle, v => c.examTitle = v, 'cfg-title')),
+        mkField('Jumlah soal', mkInput('number', c.numQuestions, v => c.numQuestions = clamp(+v, 1, 100), 'cfg-q', { min: 1, max: 100 })),
+        mkField('Jumlah opsi (A–…)', mkSelect([3, 4, 5, 6], c.numOptions, v => c.numOptions = +v, 'cfg-o')),
+        mkField('Kolom di lembar', mkSelect([1, 2, 3], c.columns, v => c.columns = +v, 'cfg-col')),
+        mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(1, Math.round(+v) || 1), 'cfg-w', { min: 1, step: 1 })),
+        mkField('KKM (batas tuntas, 0–100)', mkInput('number', c.kkm ?? 70, v => c.kkm = clamp(Math.round(+v), 0, 100), 'cfg-kkm', { min: 0, max: 100, step: 1 }))
+      ])
     ]));
 
-    // --- Bagian esai ---
-    card.appendChild(el('h3', { class: 'section' }, 'Bagian Esai (hanya dicetak, dinilai manual)'));
-    const essayWrap = el('div', { class: 'grid-form' }, [
-      mkField('Sertakan halaman esai?', mkSelect(['Tidak', 'Ya'], c.hasEssay ? 'Ya' : 'Tidak', v => c.hasEssay = (v === 'Ya'), 'cfg-essay')),
-      mkField('Jumlah soal esai', mkInput('number', c.essayCount || 5, v => c.essayCount = clamp(+v, 1, 20), 'cfg-essayn', { min: 1, max: 20 }))
-    ]);
-    card.appendChild(essayWrap);
+    // Segmen: Header Lembar
+    const ta = el('textarea', { id: 'cfg-titlelines', rows: '3', class: 'sg-textarea' });
+    ta.value = c.titleLines || '';
+    ta.addEventListener('input', e => c.titleLines = e.target.value);
+    card.appendChild(settingGroup(sgIcon.sheet, 'Header Lembar', 'Teks kop & identitas yang tampil saat lembar dicetak.', [
+      el('label', { class: 'field' }, ['Judul kop (tiap baris = 1 baris di lembar)', ta]),
+      el('div', { class: 'grid-form', style: 'margin-top:14px' }, [
+        mkField('Mata Pelajaran (kosong = garis isian)', mkInput('text', c.mapel || '', v => c.mapel = v, 'cfg-mapel')),
+        mkField('Hari/Tanggal (opsional)', mkInput('text', c.hariTanggal || '', v => c.hariTanggal = v, 'cfg-hari')),
+        mkField('Waktu (opsional)', mkInput('text', c.waktu || '', v => c.waktu = v, 'cfg-waktu'))
+      ])
+    ]));
+
+    // Segmen: Bagian Esai
+    card.appendChild(settingGroup(sgIcon.essay, 'Bagian Esai', 'Halaman esai hanya dicetak — dinilai manual, tidak discan.', [
+      el('div', { class: 'grid-form' }, [
+        mkField('Sertakan halaman esai?', mkSelect(['Tidak', 'Ya'], c.hasEssay ? 'Ya' : 'Tidak', v => c.hasEssay = (v === 'Ya'), 'cfg-essay')),
+        mkField('Jumlah soal esai', mkInput('number', c.essayCount || 5, v => c.essayCount = clamp(+v, 1, 20), 'cfg-essayn', { min: 1, max: 20 }))
+      ])
+    ]));
 
     card.appendChild(el('div', { class: 'btn-row' }, [
       el('button', { class: 'btn accent', onclick: () => saveSetup(), 'aria-label': 'Simpan Pengaturan' }, 'Simpan Pengaturan'),
