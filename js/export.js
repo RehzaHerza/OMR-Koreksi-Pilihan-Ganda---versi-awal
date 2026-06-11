@@ -29,11 +29,11 @@ const OMRExport = (function () {
     return `rekap_nilai_${t}_${d}.${ext}`;
   }
 
-  /* Kop diambil otomatis dari Pengaturan (sama spt lembar cetak) */
+  /* Kop rekap. Judul = tetap "REKAP NILAI" (bukan dari kop lembar),
+     tapi identitas (Mapel/Kelas/Hari-Tanggal/Waktu) tetap ikut Pengaturan. */
   function kopInfo() {
     const c = OMR.cfg;
-    const titles = String(c.titleLines || 'REKAP NILAI')
-      .split('\n').map(s => s.trim()).filter(Boolean);
+    const titles = ['REKAP NILAI'];
     let kelas = '';
     try { kelas = (OMR.activeProfile() && OMR.activeProfile().name) || ''; } catch (e) { kelas = ''; }
     const ident = [];
