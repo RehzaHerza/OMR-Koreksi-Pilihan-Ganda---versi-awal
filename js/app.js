@@ -31,7 +31,7 @@
     const active = OMR.activeProfile();
     const sel = el('select', { title: 'Pilih kelas' },
       OMR.listProfiles().map(p => {
-        const o = el('option', { value: p.id }); o.textContent = p.name; return o;
+        const o = el('option', { value: p.id }); o.textContent = p.name || '(ketuk "Ubah nama")'; return o;
       }));
     sel.value = active.id;
     sel.addEventListener('change', e => {
@@ -74,6 +74,8 @@
   }
 
   /* ---------------- Navigasi ---------------- */
+  function isConfigured() { return !!(OMR.cfg && OMR.cfg.configured); }
+
   function switchTab(id) {
     currentTab = id;
     $$('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + id));
@@ -81,6 +83,39 @@
     const hdr = document.querySelector('header.app'); if (hdr) hdr.classList.remove('menu-open'); // tutup menu mobile
     if (id !== 'scan') stopCamera();
     ({ setup: renderSetup, key: renderKey, sheet: renderSheet, scan: renderScan, results: renderResults }[id])();
+    const lockable = (id === 'key' || id === 'sheet' || id === 'scan');
+    if (lockable && !isConfigured()) {
+      applyLock(id);
+      toast('Atur & simpan Pengaturan Soal dulu untuk membuka fitur ini.', 'warn');
+    }
+    updateTabLocks();
+  }
+
+  // Tandai tab yang terkunci (sebelum pengaturan disimpan)
+  function updateTabLocks() {
+    const locked = !isConfigured();
+    $$('nav.tabs button').forEach(b => {
+      const t = b.dataset.tab;
+      b.classList.toggle('tab-locked', locked && (t === 'key' || t === 'sheet' || t === 'scan'));
+    });
+  }
+
+  // Bungkus isi tab jadi pratinjau samar + banner peringatan
+  function applyLock(id) {
+    const view = $('#view-' + id);
+    if (!view) return;
+    const content = el('div', { class: 'locked-content' });
+    while (view.firstChild) content.appendChild(view.firstChild);
+    const banner = el('div', { class: 'lock-banner' }, [
+      el('div', { class: 'lock-ic', html: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>' }),
+      el('div', { class: 'lock-tx' }, [
+        el('div', { class: 'lock-title' }, 'Fitur masih terkunci'),
+        el('div', { class: 'lock-msg' }, 'Atur dulu jumlah soal & lainnya di Pengaturan, lalu tekan "Simpan Pengaturan". Setelah itu fitur ini terbuka.')
+      ]),
+      el('button', { class: 'btn accent', onclick: () => switchTab('setup') }, 'Ke Pengaturan')
+    ]);
+    view.appendChild(banner);
+    view.appendChild(content);
   }
 
   /* ---------------- 1. Pengaturan ---------------- */
@@ -283,12 +318,15 @@
     if ($('#cfg-essayn')) OMR.cfg.essayCount = clamp(+$('#cfg-essayn').value, 1, 20);
     OMR.syncAnswerKey();
     OMR.state.answerKey.forEach(e => e.weight = OMR.cfg.defaultWeight); // bobot ini berlaku ke SEMUA soal
+    const firstTime = !OMR.cfg.configured;
+    OMR.cfg.configured = true;   // buka kunci fitur lain
     OMR.save();
-    if (!silent) toast('Pengaturan tersimpan. Semua soal kini berbobot ' + OMR.cfg.defaultWeight + '.', 'ok', '#view-setup');
+    updateTabLocks();
+    if (!silent) toast(firstTime ? 'Pengaturan tersimpan. Fitur lain kini terbuka.' : 'Pengaturan tersimpan. Semua soal berbobot ' + OMR.cfg.defaultWeight + '.', 'ok', '#view-setup');
   }
   async function resetEverything() {
     if (!(await modalConfirm('Hapus SEMUA data (pengaturan, kunci, & nilai siswa)? Tindakan ini tidak bisa dibatalkan.', { danger: true, okText: 'Hapus Semua' }))) return;
-    OMR.resetAll(); OMR.syncAnswerKey(); renderSetup();
+    OMR.resetAll(); OMR.syncAnswerKey(); renderSetup(); updateTabLocks();
     toast('Semua data direset.', 'warn', '#view-setup');
   }
 
@@ -364,6 +402,7 @@
   }
 
   async function startCamera() {
+    if (!isConfigured()) { toast('Atur & simpan Pengaturan Soal dulu.', 'warn'); switchTab('setup'); return; }
     stopCamera();
     const area = $('#cam-area'); area.innerHTML = '';
     try {
@@ -389,6 +428,7 @@
 
   /* ---------------- Mode Live ---------------- */
   async function startLive() {
+    if (!isConfigured()) { toast('Atur & simpan Pengaturan Soal dulu.', 'warn'); switchTab('setup'); return; }
     stopCamera();
     const area = $('#cam-area'); area.innerHTML = '';
     $('#scan-result').innerHTML = '';
@@ -459,6 +499,7 @@
     runPipeline(c, c.width, c.height);
   }
   function onUpload(e) {
+    if (!isConfigured()) { toast('Atur & simpan Pengaturan Soal dulu.', 'warn'); switchTab('setup'); return; }
     const f = e.target.files[0]; if (!f) return;
     const img = new Image();
     img.onload = () => runPipeline(img, img.naturalWidth, img.naturalHeight);

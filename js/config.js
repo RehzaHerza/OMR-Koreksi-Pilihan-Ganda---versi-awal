@@ -27,6 +27,7 @@ const OMR = (function () {
       columns: 2,
       defaultWeight: 1,
       kkm: 70,             // batas tuntas (Kriteria Ketuntasan Minimal), 0..100
+      configured: false,   // true setelah guru menekan "Simpan Pengaturan" (membuka kunci fitur)
       // --- Header format resmi (untuk lembar cetak) ---
       titleLines: 'LEMBAR JAWABAN\nASESMEN SUMATIF AKHIR SEMESTER\nTAHUN PELAJARAN 2025/2026',
       mapel: '',          // bila kosong -> dicetak sbg garis isian
@@ -56,7 +57,7 @@ const OMR = (function () {
 
     // Pertama kali: buat profil default + migrasi data lama bila ada
     const id = uid('p');
-    const reg = { active: id, list: [{ id, name: 'Kelas 1' }] };
+    const reg = { active: id, list: [{ id, name: '' }] };
     localStorage.setItem(PROFILES_KEY, JSON.stringify(reg));
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
@@ -73,10 +74,13 @@ const OMR = (function () {
   function loadState() {
     try {
       const raw = localStorage.getItem(dataKey());
-      if (!raw) return defaultState();
+      if (!raw) return defaultState();        // kelas baru -> belum dikonfigurasi (terkunci)
       const s = JSON.parse(raw);
       const d = defaultState();
-      return Object.assign(d, s, { config: Object.assign(d.config, s.config || {}) });
+      const merged = Object.assign(d, s, { config: Object.assign(d.config, s.config || {}) });
+      // Migrasi: data versi lama (tanpa flag) dianggap SUDAH dikonfigurasi agar tak ikut terkunci.
+      if (!s.config || s.config.configured === undefined) merged.config.configured = true;
+      return merged;
     } catch (e) {
       console.warn('State korup, reset.', e);
       return defaultState();
