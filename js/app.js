@@ -96,7 +96,8 @@
       mkField('Jumlah soal', mkInput('number', c.numQuestions, v => c.numQuestions = clamp(+v, 1, 100), 'cfg-q', { min: 1, max: 100 })),
       mkField('Jumlah opsi (A–…)', mkSelect([3, 4, 5, 6], c.numOptions, v => c.numOptions = +v, 'cfg-o')),
       mkField('Kolom di lembar', mkSelect([1, 2, 3], c.columns, v => c.columns = +v, 'cfg-col')),
-      mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(1, Math.round(+v) || 1), 'cfg-w', { min: 1, step: 1 }))
+      mkField('Bobot tiap soal', mkInput('number', c.defaultWeight, v => c.defaultWeight = Math.max(1, Math.round(+v) || 1), 'cfg-w', { min: 1, step: 1 })),
+      mkField('KKM (batas tuntas, 0–100)', mkInput('number', c.kkm ?? 70, v => c.kkm = clamp(Math.round(+v), 0, 100), 'cfg-kkm', { min: 0, max: 100, step: 1 }))
     ]);
     card.appendChild(form);
 
@@ -121,7 +122,7 @@
     card.appendChild(essayWrap);
 
     card.appendChild(el('div', { class: 'btn-row' }, [
-      el('button', { class: 'btn accent', onclick: saveSetup }, 'Simpan Pengaturan'),
+      el('button', { class: 'btn accent', onclick: () => saveSetup(), 'aria-label': 'Simpan Pengaturan' }, 'Simpan Pengaturan'),
       el('button', { class: 'btn ghost', onclick: resetEverything }, 'Reset Semua Data')
     ]));
     $('#view-setup').appendChild(card);
@@ -255,6 +256,7 @@
     OMR.cfg.numOptions = +$('#cfg-o').value;
     OMR.cfg.columns = +$('#cfg-col').value;
     OMR.cfg.defaultWeight = Math.max(1, Math.round(+$('#cfg-w').value) || 1);
+    OMR.cfg.kkm = clamp(Math.round(+$('#cfg-kkm').value), 0, 100);
     if ($('#cfg-titlelines')) OMR.cfg.titleLines = $('#cfg-titlelines').value;
     if ($('#cfg-mapel')) OMR.cfg.mapel = $('#cfg-mapel').value;
     if ($('#cfg-hari')) OMR.cfg.hariTanggal = $('#cfg-hari').value;
@@ -563,9 +565,10 @@
   function renderResults() {
     const wrap = $('#view-results'); wrap.innerHTML = '';
     const st = OMR.state.students;
+    const kkm = OMR.cfg.kkm ?? 70;
     const card = el('div', { class: 'card' }, [
       el('h2', {}, 'Rekap Nilai'),
-      el('p', { class: 'sub' }, `${st.length} siswa tersimpan. Unduh dalam format Excel, Word, atau PDF.`)
+      el('p', { class: 'sub' }, `${st.length} siswa tersimpan · KKM ${kkm} (hijau = tuntas, merah = di bawah KKM). Unduh dalam format Excel, Word, atau PDF.`)
     ]);
     card.appendChild(el('div', { class: 'btn-row' }, [
       el('button', { class: 'btn', disabled: st.length ? null : 'disabled', onclick: () => OMRExport.toExcel(st) }, 'Unduh Excel'),
@@ -585,7 +588,7 @@
           el('td', { html: `<span class="stat benar">${c.benar || 0}</span>` }),
           el('td', { html: `<span class="stat salah">${salah}</span>` }),
           el('td', {}, `${s.score} / ${s.maxScore}`),
-          el('td', { html: `<span class="pill">${s.percent}</span>` }),
+          el('td', { html: `<span class="pill ${s.percent >= kkm ? 'pass' : 'fail'}">${s.percent}</span>` }),
           el('td', {}, el('button', { class: 'btn ghost sm', onclick: async () => { if (await modalConfirm('Hapus ' + s.name + '?', { danger: true, okText: 'Hapus' })) { OMR.state.students.splice(i, 1); OMR.save(); renderResults(); toast('Siswa dihapus.', 'warn'); } } }, 'Hapus'))
         ]);
       });

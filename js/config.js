@@ -26,6 +26,7 @@ const OMR = (function () {
       numOptions: 5,      // A..E
       columns: 2,
       defaultWeight: 1,
+      kkm: 70,             // batas tuntas (Kriteria Ketuntasan Minimal), 0..100
       // --- Header format resmi (untuk lembar cetak) ---
       titleLines: 'LEMBAR JAWABAN\nASESMEN SUMATIF AKHIR SEMESTER\nTAHUN PELAJARAN 2025/2026',
       mapel: '',          // bila kosong -> dicetak sbg garis isian

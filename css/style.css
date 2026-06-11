@@ -201,6 +201,9 @@ table.rekap tbody tr:nth-child(even) td { background: var(--surface-2); }
 table.rekap tbody tr:hover td { background: var(--brand-soft); }
 .table-scroll { overflow-x: auto; border-radius: var(--r); border: 1px solid var(--line); box-shadow: var(--shadow-btn); }
 .pill { font-weight: 800; font-size: 15px; color: var(--brand); }
+.pill.pass, .pill.fail { display: inline-block; min-width: 40px; padding: 4px 12px; border-radius: 20px; font-size: 14px; }
+.pill.pass { background: var(--green-soft); color: #0f6b46; }
+.pill.fail { background: var(--red-soft); color: #b53a26; }
 
 .empty { text-align: center; color: var(--muted); padding: 48px 20px; font-size: 14.5px; }
 .notice { padding: 13px 16px; border-radius: var(--r); font-size: 13.5px; margin: 14px 0; border: 1px solid transparent; line-height: 1.5; }
