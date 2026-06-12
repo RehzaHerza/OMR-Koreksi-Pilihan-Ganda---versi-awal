@@ -52,19 +52,40 @@ const OMRCV = (function () {
   }
 
   /* Cari MARKER (kotak hitam padat) dalam jendela pojok.
-     Dulu: ambil blob gelap TERBESAR -> sering salah pilih meja/tepi kertas
-     yang lebih besar dari marker. Sekarang: kumpulkan semua blob gelap, lalu
-     pilih yang paling mirip kotak marker (lolos markerLike, fill paling padat).
-     thr = ambang gelap utk marker (lebih ketat, marker = hitam pekat). */
-  function markerInWindow(gray, w, h, x0, y0, x1, y1, thr) {
+     Ambang GELAP dihitung ADAPTIF dari kontras lokal pojok itu (bukan angka
+     tetap), supaya tahan foto redup (webcam) & marker tinta tipis: marker cukup
+     menjadi bagian paling gelap di pojoknya. Lalu dipilih blob paling mirip
+     kotak marker (lolos markerLike, fill paling padat). */
+  function markerInWindow(gray, w, h, x0, y0, x1, y1) {
     x0 = Math.max(0, x0 | 0); y0 = Math.max(0, y0 | 0);
     x1 = Math.min(w, x1 | 0); y1 = Math.min(h, y1 | 0);
     const ww = x1 - x0, hh = y1 - y0;
     if (ww <= 0 || hh <= 0) return null;
+    const area = ww * hh;
 
-    const minCnt = ww * hh * 0.0025;   // blob minimum (longgar utk foto kurang terang)
-    const visited = new Uint8Array(ww * hh);
-    const stack = new Int32Array(ww * hh * 2);
+    // histogram brightness lokal
+    const hist = new Int32Array(256);
+    for (let ly = 0; ly < hh; ly++) {
+      const row = (y0 + ly) * w + x0;
+      for (let lx = 0; lx < ww; lx++) hist[gray[row + lx]]++;
+    }
+    // kertas = persentil-80 (terang); gelap = rata2 ~N piksel tergelap (inti marker)
+    let acc = 0, paperLevel = 255; const pTarget = area * 0.80;
+    for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= pTarget) { paperLevel = i; break; } }
+    const N = Math.min(area, Math.max(40, Math.round(area * 0.002)));
+    let dcount = 0, dsum = 0;
+    for (let i = 0; i < 256 && dcount < N; i++) {
+      const take = Math.min(hist[i], N - dcount);
+      dsum += i * take; dcount += take;
+    }
+    const darkLevel = dcount ? dsum / dcount : 0;
+    const contrast = paperLevel - darkLevel;
+    if (contrast < 14) return null;          // pojok rata/tanpa objek gelap -> tak ada marker
+    const thr = darkLevel + contrast * 0.5;  // ambang di tengah marker<->kertas (adaptif kontras)
+
+    const minCnt = area * 0.0025;            // blob minimum (longgar utk foto kurang terang)
+    const visited = new Uint8Array(area);
+    const stack = new Int32Array(area * 2);
     let best = null, bestFill = -1;
 
     for (let ly = 0; ly < hh; ly++) {
@@ -116,12 +137,12 @@ const OMRCV = (function () {
   }
 
   /* Deteksi 4 marker pojok. Mengembalikan {tl,tr,bl,br} atau null. */
-  function detectFiducials(gray, w, h, fidThr) {
+  function detectFiducials(gray, w, h) {
     const wx = w * FID_WIN_X, wy = h * FID_WIN_Y;
-    const tl = markerInWindow(gray, w, h, 0, 0, wx, wy, fidThr);
-    const tr = markerInWindow(gray, w, h, w - wx, 0, w, wy, fidThr);
-    const bl = markerInWindow(gray, w, h, 0, h - wy, wx, h, fidThr);
-    const br = markerInWindow(gray, w, h, w - wx, h - wy, w, h, fidThr);
+    const tl = markerInWindow(gray, w, h, 0, 0, wx, wy);
+    const tr = markerInWindow(gray, w, h, w - wx, 0, w, wy);
+    const bl = markerInWindow(gray, w, h, 0, h - wy, wx, h);
+    const br = markerInWindow(gray, w, h, w - wx, h - wy, w, h);
     if (!tl || !tr || !bl || !br) return null;
     // (markerLike sudah dipastikan di dalam markerInWindow)
 
