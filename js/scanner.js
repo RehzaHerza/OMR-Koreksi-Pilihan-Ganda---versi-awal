@@ -16,8 +16,8 @@
 const OMRCV = (function () {
 
   const PROC_MAX_W = 1000;     // lebar maksimum saat proses (kecepatan)
-  const FID_WIN_X = 0.32;      // lebar jendela pencarian marker (porsi)
-  const FID_WIN_Y = 0.24;     // tinggi jendela pencarian marker (porsi)
+  const FID_WIN_X = 0.5;      // lebar jendela pencarian marker (porsi) — kuadran
+  const FID_WIN_Y = 0.5;      // tinggi jendela pencarian marker (porsi) — kuadran
 
   /* Muat sumber gambar (Image/Video/Canvas) ke canvas proses */
   function toProcCanvas(src, srcW, srcH) {
@@ -51,17 +51,19 @@ const OMRCV = (function () {
     return 255;
   }
 
-  /* Cari MARKER (kotak hitam padat) dalam jendela pojok.
-     Ambang GELAP dihitung ADAPTIF dari kontras lokal pojok itu (bukan angka
-     tetap), supaya tahan foto redup (webcam) & marker tinta tipis: marker cukup
-     menjadi bagian paling gelap di pojoknya. Lalu dipilih blob paling mirip
-     kotak marker (lolos markerLike, fill paling padat). */
-  function markerInWindow(gray, w, h, x0, y0, x1, y1) {
+  /* Cari MARKER (kotak hitam padat) dalam jendela pojok (kini se-kuadran).
+     Ambang GELAP adaptif dari kontras lokal (tahan redup & tinta tipis).
+     Ukuran marker dinilai relatif FRAME (bukan jendela) agar marker kecil saat
+     kertas portrait/jauh tetap lolos. Di antara kandidat mirip-kotak, dipilih
+     yang PALING DEKAT ke sudut frame (cornerX,cornerY) -> ambil marker sudut,
+     bukan sel jawaban yang kebetulan terisi penuh di tengah. */
+  function markerInWindow(gray, w, h, x0, y0, x1, y1, cornerX, cornerY) {
     x0 = Math.max(0, x0 | 0); y0 = Math.max(0, y0 | 0);
     x1 = Math.min(w, x1 | 0); y1 = Math.min(h, y1 | 0);
     const ww = x1 - x0, hh = y1 - y0;
     if (ww <= 0 || hh <= 0) return null;
     const area = ww * hh;
+    const frameMin = Math.min(w, h);
 
     // histogram brightness lokal
     const hist = new Int32Array(256);
@@ -83,10 +85,11 @@ const OMRCV = (function () {
     if (contrast < 14) return null;          // pojok rata/tanpa objek gelap -> tak ada marker
     const thr = darkLevel + contrast * 0.5;  // ambang di tengah marker<->kertas (adaptif kontras)
 
-    const minCnt = area * 0.0025;            // blob minimum (longgar utk foto kurang terang)
+    const minSide = frameMin * 0.008;
+    const minCnt = Math.max(18, minSide * minSide * 0.5);   // tolak bintik noise (absolut kecil)
     const visited = new Uint8Array(area);
     const stack = new Int32Array(area * 2);
-    let best = null, bestFill = -1;
+    let best = null, bestDist = Infinity;
 
     for (let ly = 0; ly < hh; ly++) {
       for (let lx = 0; lx < ww; lx++) {
@@ -113,36 +116,38 @@ const OMRCV = (function () {
         }
         if (cnt < minCnt) continue;
         const bw = mxx - mnx + 1, bh = mxy - mny + 1;
-        const blob = { x: sumX / cnt, y: sumY / cnt, area: cnt, bw, bh };
-        if (!markerLike(blob, ww, hh)) continue;   // hanya yg mirip kotak marker
-        const fill = cnt / (bw * bh);              // marker = kotak padat -> fill tinggi
-        if (fill > bestFill) { bestFill = fill; best = blob; }
+        const cxC = sumX / cnt, cyC = sumY / cnt;
+        const blob = { x: cxC, y: cyC, area: cnt, bw, bh };
+        if (!markerLike(blob, frameMin)) continue;   // mirip kotak marker (ukuran relatif frame)
+        const dx = cxC - cornerX, dy = cyC - cornerY;
+        const dist = dx * dx + dy * dy;              // jarak ke sudut frame
+        if (dist < bestDist) { bestDist = dist; best = blob; }
       }
     }
     return best;
   }
 
   /* Validasi: gumpalan ini benar-benar mirip MARKER (kotak hitam padat)?
-     Menolak rambut/bayangan/layar HP yang gelap tapi tak berbentuk kotak. */
-  function markerLike(b, winW, winH) {
+     Ukuran dinilai relatif FRAME (frameMin = sisi terpendek frame). */
+  function markerLike(b, frameMin) {
     if (!b) return false;
     const aspect = b.bw / b.bh;
     if (aspect < 0.5 || aspect > 2.0) return false;             // ~persegi (toleransi crop tipis)
     const fill = b.area / (b.bw * b.bh);
     if (fill < 0.5) return false;                               // padat (bukan rambut/acak)
-    const minS = Math.min(winW, winH) * 0.025;
+    const minS = frameMin * 0.008, maxS = frameMin * 0.14;
     if (b.bw < minS || b.bh < minS) return false;               // jangan terlalu kecil
-    if (b.bw > winW * 0.6 || b.bh > winH * 0.6) return false;    // jangan sebesar jendela
+    if (b.bw > maxS || b.bh > maxS) return false;               // jangan terlalu besar (bukan marker)
     return true;
   }
 
   /* Deteksi 4 marker pojok. Mengembalikan {tl,tr,bl,br} atau null. */
   function detectFiducials(gray, w, h) {
     const wx = w * FID_WIN_X, wy = h * FID_WIN_Y;
-    const tl = markerInWindow(gray, w, h, 0, 0, wx, wy);
-    const tr = markerInWindow(gray, w, h, w - wx, 0, w, wy);
-    const bl = markerInWindow(gray, w, h, 0, h - wy, wx, h);
-    const br = markerInWindow(gray, w, h, w - wx, h - wy, w, h);
+    const tl = markerInWindow(gray, w, h, 0, 0, wx, wy, 0, 0);
+    const tr = markerInWindow(gray, w, h, w - wx, 0, w, wy, w, 0);
+    const bl = markerInWindow(gray, w, h, 0, h - wy, wx, h, 0, h);
+    const br = markerInWindow(gray, w, h, w - wx, h - wy, w, h, w, h);
     if (!tl || !tr || !bl || !br) return null;
     // (markerLike sudah dipastikan di dalam markerInWindow)
 
